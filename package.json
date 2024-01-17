@@ -1,0 +1,40 @@
+{
+  "name": "bun-webui",
+  "version": "0.0.9",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webui-dev/bun-webui.git"
+  },
+  "description": "Use any web browser as GUI, with Bun in the backend and HTML5 in the frontend.",
+  "keywords": [
+    "webui",
+    "bun",
+    "bunjs"
+  ],
+  "homepage": "https://webui.me/",
+  "bugs": "https://github.com/webui-dev/bun-webui/issues",
+  "license": "MIT",
+  "author": "",
+  "module": "src/webui.ts",
+  "type": "module",
+  "types": "types/webui.d.ts",
+  "files": [
+    "src/",
+    "types/"
+  ],
+  "scripts": {
+    "types": "tsc",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/bun": "latest",
+    "prettier": "^3.4.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16"
+  }
+}
