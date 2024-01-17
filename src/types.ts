@@ -52,7 +52,7 @@ const types: MyFns = {
     returns: "bool",
   },
 
-  // webui_set_kiosk(size_t window, bool status)
+  // void webui_set_kiosk(size_t window, bool status)
   webui_set_kiosk: {
     args: ["usize", "bool"],
     returns: "void",
@@ -96,7 +96,8 @@ const types: MyFns = {
 
   // void webui_set_file_handler(size_t window, const void* (*handler)(const char* filename, int* length))
   webui_set_file_handler: {
-    args: ["usize", "callback", "pointer"],
+    args: ["usize", "callback"],
+    returns: "void",
   },
 
   // bool webui_is_shown(size_t window)
