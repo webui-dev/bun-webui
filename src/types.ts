@@ -2,10 +2,16 @@ import { type Narrow, type FFIFunction, CFunction, JSCallback } from "bun:ffi";
 
 type MyFns = Record<string, Narrow<FFIFunction>>;
 
-const searchIterator = new JSCallback((ptr, length) => /hello/.test("55"), {
-  returns: "bool",
-  args: ["ptr", "usize"],
-});
+// NOTE: this is not implemented
+const bind_callback = () => {
+  return new JSCallback((ptr) => {}, {
+    returns: "void",
+    args: ["ptr"],
+  });
+};
+
+// webui_set_file_handler
+// webui_interface_bind
 
 const types: MyFns = {
   // size_t webui_new_window(void)
@@ -249,4 +255,121 @@ const types: MyFns = {
     args: ["usize", "usize"],
     returns: "void",
   },
+
+  // long long int webui_get_int_at(webui_event_t* e, size_t index)
+  webui_get_int_at: {
+    args: ["pointer", "usize"],
+    returns: "i64",
+  },
+
+  // long long int webui_get_int(webui_event_t* e)
+  webui_get_int: {
+    args: ["pointer"],
+    returns: "i64",
+  },
+
+  // const char* webui_get_string_at(webui_event_t* e, size_t index)
+  webui_get_string_at: {
+    args: ["pointer", "usize"],
+    returns: "cstring",
+  },
+
+  // const char* webui_get_string(webui_event_t* e)
+  webui_get_string: {
+    args: ["pointer"],
+    returns: "cstring",
+  },
+
+  // bool webui_get_bool_at(webui_event_t* e, size_t index)
+  webui_get_bool_at: {
+    args: ["pointer", "usize"],
+    returns: "bool",
+  },
+
+  // bool webui_get_bool(webui_event_t* e)
+  webui_get_bool: {
+    args: ["pointer"],
+    returns: "bool",
+  },
+
+  // size_t webui_get_size_at(webui_event_t* e, size_t index)
+  webui_get_size_at: {
+    args: ["pointer", "usize"],
+    returns: "usize",
+  },
+
+  // size_t webui_get_size(webui_event_t* e)
+  webui_get_size: {
+    args: ["pointer"],
+    returns: "usize",
+  },
+
+  // void webui_return_int(webui_event_t* e, long long int n)
+  webui_return_int: {
+    args: ["pointer", "i64"],
+    returns: "void",
+  },
+
+  // void webui_return_string(webui_event_t* e, const char* s)
+  webui_return_string: {
+    args: ["pointer", "string"],
+    returns: "void",
+  },
+
+  // void webui_return_bool(webui_event_t* e, bool b)
+  webui_return_bool: {
+    args: ["pointer", "bool"],
+    returns: "void",
+  },
+
+  // size_t webui_interface_bind(size_t window, const char* element,
+  // void (*func)(size_t, size_t, char*, size_t, size_t))
+  webui_interface_bind: {
+    args: ["usize", "cstring", "callback"],
+    returns: "usize",
+  },
+
+  // void webui_interface_set_response(size_t window, size_t event_number, const char* response)
+  webui_interface_set_response: {
+    args: ["usize", "usize", "cstring"],
+    returns: "void",
+  },
+
+  // bool webui_interface_is_app_running(void)
+  webui_interface_is_app_running: {
+    args: [],
+    returns: "bool",
+  },
+
+  // size_t webui_interface_get_window_id(size_t window)
+  webui_interface_get_window_id: {
+    args: ["usize"],
+    returns: "usize",
+  },
+
+  // const char* webui_interface_get_string_at(size_t window, size_t event_number, size_t index)
+  webui_interface_get_string_at: {
+    args: ["usize", "usize", "usize"],
+    returns: "cstring",
+  },
+
+  // long long int webui_interface_get_int_at(size_t window, size_t event_number, size_t index)
+  webui_interface_get_int_at: {
+    args: ["usize", "usize", "usize"],
+    returns: "i64",
+  },
+
+  // bool webui_interface_get_bool_at(size_t window, size_t event_number, size_t index)
+  webui_interface_get_bool_at: {
+    args: ["usize", "usize", "usize"],
+    returns: "bool",
+  },
+
+  // size_t webui_interface_get_size_at(size_t window, size_t event_number, size_t index)
+  webui_interface_get_size_at: {
+    args: ["usize", "usize", "usize"],
+    returns: "usize",
+  },
 };
+
+export { types };
