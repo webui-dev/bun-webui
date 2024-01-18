@@ -19,8 +19,7 @@
   "type": "module",
   "files": [],
   "scripts": {
-    "format": "prettier --write .",
-    "test": "src/index.ts"
+    "format": "prettier --write ."
   },
   "devDependencies": {
     "@types/bun": "latest",
