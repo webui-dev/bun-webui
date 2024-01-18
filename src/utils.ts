@@ -6,6 +6,6 @@ import { CString, ptr } from "bun:ffi";
  */
 export function toCString(value: string): CString {
   const u8_arr = new TextEncoder().encode(value + "\0");
-  const str_ptr = ptr(u8_arr);
-  return new CString(str_ptr);
+  const str_ptr = ptr(u8_arr, 0);
+  return new CString(str_ptr, 0, u8_arr.byteLength);
 }

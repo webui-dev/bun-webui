@@ -1,19 +1,182 @@
-import { type Narrow, type FFIFunction, CFunction, JSCallback } from "bun:ffi";
+import {
+  type Narrow,
+  type FFIFunction,
+  JSCallback,
+  type Pointer,
+  read,
+  CString,
+  toArrayBuffer,
+} from "bun:ffi";
+import { toCString } from "./utils";
+import { endianness } from "os";
+
+const is_little_endian = endianness() == "LE";
 
 type MyFns = Record<string, Narrow<FFIFunction>>;
 
-// NOTE: this is not implemented
-const bind_callback = () => {
-  return new JSCallback((ptr) => {}, {
-    returns: "void",
-    args: ["ptr"],
-  });
-};
+export enum Events {
+  EVENT_DISCONNECTED = 0, // 0. Window disconnection event
+  EVENT_CONNECTED, // 1. Window connection event
+  EVENT_MOUSE_CLICK, // 2. Mouse click event
+  EVENT_NAVIGATION, // 3. Window navigation event
+  EVENT_CALLBACK, // 4. Function call event
+}
+
+export enum Runtimes {
+  None = 0, // 0. Prevent WebUI from using any runtime for .js and .ts files
+  Deno, // 1. Use Deno runtime for .js and .ts files
+  NodeJS, // 2. Use Nodejs runtime for .js files
+}
+
+export enum Browsers {
+  NoBrowser = 0, // 0. No web browser
+  AnyBrowser, // 1. Default recommended web browser
+  Chrome, // 2. Google Chrome
+  Firefox, // 3. Mozilla Firefox
+  Edge, // 4. Microsoft Edge
+  Safari, // 5. Apple Safari
+  Chromium, // 6. The Chromium Project
+  Opera, // 7. Opera Browser
+  Brave, // 8. The Brave Browser
+  Vivaldi, // 9. The Vivaldi Browser
+  Epic, // 10. The Epic Browser
+  Yandex, // 11. The Yandex Browser
+  ChromiumBased, // 12. Any Chromium based browser
+}
+
+export class Event {
+  ptr: Pointer;
+
+  constructor(ptr: Pointer) {
+    this.ptr = ptr;
+  }
+
+  /**
+   * get window handle
+   * @returns number
+   */
+  get window_handle() {
+    const val = read.u64(this.ptr, 0);
+    return Number(val);
+  }
+
+  /**
+   * get event type
+   * @returns Events
+   */
+  get event_type(): Events {
+    const val = read.u64(this.ptr, 8);
+    // typescript has no security check for enumerations
+    return Number(val);
+  }
+
+  /**
+   * get element name
+   */
+  get element() {
+    const val = read.ptr(this.ptr, 16);
+    return new CString(val);
+  }
+
+  /**
+   * get event number
+   */
+  get event_number() {
+    const val = read.u64(this.ptr, 24);
+    return Number(val);
+  }
+
+  /**
+   * get bind id
+   */
+  get bind_id() {
+    const val = read.u64(this.ptr, 32);
+    return Number(val);
+  }
+}
+
+export class BindCallback {
+  callback: JSCallback;
+
+  constructor(callback: (e: Event) => void) {
+    const val = new JSCallback(
+      (ptr: Pointer) => {
+        const wrap = new Event(ptr);
+        callback(wrap);
+      },
+      {
+        args: ["pointer"],
+        returns: "void",
+      },
+    );
+    this.callback = val;
+  }
+}
+
+export class InterfaceBindCallback {
+  callback: JSCallback;
+  constructor(
+    callback: (
+      window_handle: number,
+      event_type: number,
+      element: CString,
+      event_number: number,
+      bind_id: number,
+    ) => void,
+  ) {
+    const val = new JSCallback(
+      (
+        window_handle: bigint,
+        event_type: bigint,
+        element: CString,
+        event_number: bigint,
+        bind_id: bigint,
+      ) => {
+        callback(
+          Number(window_handle),
+          Number(event_type),
+          element,
+          Number(event_number),
+          Number(bind_id),
+        );
+      },
+      {
+        args: ["usize", "usize", "cstring", "usize", "usize"],
+        returns: "void",
+      },
+    );
+    this.callback = val;
+  }
+}
+
+export class SetFileHandlerCallbak {
+  callback: JSCallback;
+
+  constructor(callback: (path: CString) => string) {
+    const val = new JSCallback(
+      (path: CString, length: Pointer): Pointer => {
+        const str = callback(path);
+        const res = toCString(str);
+
+        let len_ptr = new DataView(toArrayBuffer(length, 0, 4));
+        len_ptr.setInt32(0, res.byteLength as number, is_little_endian);
+
+        return res.ptr;
+      },
+      {
+        args: ["cstring", "pointer"],
+        returns: "pointer",
+      },
+    );
+
+    this.callback = val;
+  }
+}
 
 // webui_set_file_handler
 // webui_interface_bind
 
-const types: MyFns = {
+export const types: MyFns = {
   // size_t webui_new_window(void)
   webui_new_window: {
     args: [],
@@ -31,8 +194,6 @@ const types: MyFns = {
     args: [],
     returns: "usize,",
   },
-
-  // TODO: callback implement
 
   // size_t webui_bind(size_t window, const char* element, void (*func)(webui_event_t* e))
   webui_bind: {
@@ -372,5 +533,3 @@ const types: MyFns = {
     returns: "usize",
   },
 };
-
-export { types };
