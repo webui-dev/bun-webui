@@ -1,4 +1,4 @@
-import { webui, BindCallback } from "./types";
+import { webui, BindCallback, Browsers } from "./types";
 import { toCString } from "./utils";
 
 const WEBUI_MAX_IDS = 256;
@@ -86,9 +86,9 @@ export class WebUI {
    * @return Returns True if showing the window is successed.
    * @example
    * ```ts
-   * const bind_id1 = myWindow1.show("<html>...</html>");
-   * const bind_id2 = myWindow2.show("index.html");
-   * const bind_id3 = myWindow3.show("http://...");
+   * const is_successed = myWindow1.show("<html>...</html>");
+   * const is_successed = myWindow2.show("index.html");
+   * const is_successed = myWindow3.show("http://...");
    * ```
    */
   show(content: string): boolean {
@@ -98,14 +98,111 @@ export class WebUI {
 
   /**
    *
-   * Wait until all opened windows get closed.
+   * Same as `show()`. But using a specific web browser
+   * @param string The HTML, URL, Or a local file
+   * @param Browsers The web browser to be used
+   * @return Returns True if showing the window is successed.
+   * @example
+   * ```ts
+   * const is_successed = myWindow1.show("<html>...</html>", Browsers.Chrome);
+   * const is_successed = myWindow2.show("index.html", Browsers.Chrome);
+   * const is_successed = myWindow3.show("http://...", Browsers.Chrome);
+   * ```
+   */
+  showBrowser(content: string, browser: Browsers): boolean {
+    const tmp_content = toCString(content);
+    return webui.webui_show_browser(this.handle, tmp_content.ptr, browser);
+  }
+
+  /**
    *
+   * Set the window in Kiosk mode (Full screen)
+   * @param boolean status True or False
+   * @example
+   * ```ts
+   * myWindow.setKiosk(true);
+   * ```
+   */
+  setKiosk(status: boolean) {
+    webui.webui_set_kiosk(this.handle, status);
+  }
+
+  /**
+   *
+   * Wait until all opened windows get closed.
    * @example
    * ```ts
    * myWindow.wait();
    * ```
    */
-  wait() {
+  static wait() {
     webui.webui_wait();
+  }
+
+  /**
+   *
+   * Close a specific window only. The window object will still exist.
+   * @example
+   * ```ts
+   * myWindow.close();
+   * ```
+   */
+  close() {
+    webui.webui_close(this.handle);
+  }
+
+  /**
+   *
+   * Close a specific window and free all memory resources.
+   * @example
+   * ```ts
+   * myWindow.destory();
+   * ```
+   */
+  destory() {
+    webui.webui_destroy(this.handle);
+  }
+
+  /**
+   *
+   * Close all open windows. `wait()` will return (Break).
+   * @example
+   * ```ts
+   * WebUI.exit();
+   * ```
+   */
+  static exit() {
+    webui.webui_exit();
+  }
+
+  /**
+   *
+   * Set the web-server root folder path for a specific window.
+   * @param string The local folder full path
+   * @return Returns True if setting root floader is successed.
+   * @example
+   * ```ts
+   * myWindow.setRootFolder("/home/Foo/Bar/");
+   * ```
+   */
+  setRootFolder(path: string) {
+    const tmp_path = toCString(path);
+    return webui.webui_set_root_folder(this.handle, tmp_path.ptr);
+  }
+
+  /**
+   *
+   * Set the web-server root folder path for all windows.
+   * Should be used before `show()`.
+   * @param string The local folder full path
+   * @return Returns True if setting default root floader is successed.
+   * @example
+   * ```ts
+   * WebUI.exit();
+   * ```
+   */
+  static setDefaultRootFolder(path: string) {
+    const tmp_path = toCString(path);
+    return webui.webui_set_default_root_folder(tmp_path.ptr);
   }
 }

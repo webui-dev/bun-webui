@@ -42,7 +42,7 @@ export enum Browsers {
 }
 
 export class Event {
-  ptr: Pointer;
+  private ptr: Pointer;
 
   constructor(ptr: Pointer) {
     this.ptr = ptr;
@@ -119,7 +119,7 @@ export class BindCallback {
 }
 
 export class InterfaceBindCallback {
-  callback: JSCallback;
+  private callback: JSCallback;
   constructor(
     callback: (
       window_handle: number,
@@ -152,6 +152,14 @@ export class InterfaceBindCallback {
     );
     this.callback = val;
   }
+
+  get value() {
+    return this.callback;
+  }
+
+  get ptr() {
+    return this.callback.ptr;
+  }
 }
 
 export class SetFileHandlerCallbak {
@@ -175,6 +183,14 @@ export class SetFileHandlerCallbak {
     );
 
     this.callback = val;
+  }
+
+  get value() {
+    return this.callback;
+  }
+
+  get ptr() {
+    return this.callback.ptr;
   }
 }
 
