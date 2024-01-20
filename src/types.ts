@@ -42,10 +42,10 @@ export enum Browsers {
 }
 
 export class Event {
-  private ptr: Pointer;
+  private _ptr: Pointer;
 
   constructor(ptr: Pointer) {
-    this.ptr = ptr;
+    this._ptr = ptr;
   }
 
   /**
@@ -53,7 +53,7 @@ export class Event {
    * @returns number
    */
   get window_handle() {
-    const val = read.u64(this.ptr, 0);
+    const val = read.u64(this._ptr, 0);
     return Number(val);
   }
 
@@ -62,7 +62,7 @@ export class Event {
    * @returns Events
    */
   get event_type(): Events {
-    const val = read.u64(this.ptr, 8);
+    const val = read.u64(this._ptr, 8);
     // typescript has no security check for enumerations
     return Number(val);
   }
@@ -71,7 +71,7 @@ export class Event {
    * get element name
    */
   get element() {
-    const val = read.ptr(this.ptr, 16);
+    const val = read.ptr(this._ptr, 16);
     return new CString(val);
   }
 
@@ -79,7 +79,7 @@ export class Event {
    * get event number
    */
   get event_number() {
-    const val = read.u64(this.ptr, 24);
+    const val = read.u64(this._ptr, 24);
     return Number(val);
   }
 
@@ -87,8 +87,12 @@ export class Event {
    * get bind id
    */
   get bind_id() {
-    const val = read.u64(this.ptr, 32);
+    const val = read.u64(this._ptr, 32);
     return Number(val);
+  }
+
+  get ptr(): Pointer {
+    return this._ptr;
   }
 }
 

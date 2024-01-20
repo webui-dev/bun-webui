@@ -1,9 +1,11 @@
 import {
+  Event,
   webui,
   BindCallback,
   SetFileHandlerCallbak,
   Browsers,
   Runtimes,
+  InterfaceBindCallback,
 } from "./types";
 import { arrayToPtr, toCString } from "./utils";
 
@@ -13,7 +15,11 @@ const WEBUI_MAX_IDS = 256;
 const windows: Map<number, WebUI> = new Map();
 
 export class WebUI {
-  private handle: number;
+  private _handle: number;
+
+  get handle() {
+    return this._handle;
+  }
 
   /**
    *
@@ -46,12 +52,12 @@ export class WebUI {
         // TODO: this should be error handle
       }
       const handle = webui.webui_new_window_id(arg);
-      this.handle = Number(handle);
+      this._handle = Number(handle);
     } else {
       const handle = webui.webui_new_window();
-      this.handle = Number(handle);
+      this._handle = Number(handle);
     }
-    windows.set(this.handle, this);
+    windows.set(this._handle, this);
   }
 
   /**
@@ -85,7 +91,7 @@ export class WebUI {
   bind(element: string, callback: BindCallback): number {
     const cstring = toCString(element);
 
-    const bind_id = webui.webui_bind(this.handle, cstring.ptr, callback.ptr);
+    const bind_id = webui.webui_bind(this._handle, cstring.ptr, callback.ptr);
     return Number(bind_id);
   }
 
@@ -105,7 +111,7 @@ export class WebUI {
    */
   show(content: string): boolean {
     const tmp_content = toCString(content);
-    return webui.webui_show(this.handle, tmp_content.ptr);
+    return webui.webui_show(this._handle, tmp_content.ptr);
   }
 
   /**
@@ -124,7 +130,7 @@ export class WebUI {
    */
   showBrowser(content: string, browser: Browsers): boolean {
     const tmp_content = toCString(content);
-    return webui.webui_show_browser(this.handle, tmp_content.ptr, browser);
+    return webui.webui_show_browser(this._handle, tmp_content.ptr, browser);
   }
 
   /**
@@ -138,7 +144,7 @@ export class WebUI {
    * ```
    */
   setKiosk(status: boolean) {
-    webui.webui_set_kiosk(this.handle, status);
+    webui.webui_set_kiosk(this._handle, status);
   }
 
   /**
@@ -164,7 +170,7 @@ export class WebUI {
    * ```
    */
   close() {
-    webui.webui_close(this.handle);
+    webui.webui_close(this._handle);
   }
 
   /**
@@ -177,7 +183,7 @@ export class WebUI {
    * ```
    */
   destory() {
-    webui.webui_destroy(this.handle);
+    webui.webui_destroy(this._handle);
   }
 
   /**
@@ -206,7 +212,7 @@ export class WebUI {
    */
   setRootFolder(path: string) {
     const tmp_path = toCString(path);
-    return webui.webui_set_root_folder(this.handle, tmp_path.ptr);
+    return webui.webui_set_root_folder(this._handle, tmp_path.ptr);
   }
 
   /**
@@ -237,7 +243,7 @@ export class WebUI {
    * ```
    */
   setFileHandler(callback: SetFileHandlerCallbak) {
-    webui.webui_set_file_handler(this.handle, callback.ptr);
+    webui.webui_set_file_handler(this._handle, callback.ptr);
   }
 
   /**
@@ -251,7 +257,7 @@ export class WebUI {
    * ```
    */
   isShown(): boolean {
-    return webui.webui_is_shown(this.handle);
+    return webui.webui_is_shown(this._handle);
   }
 
   /**
@@ -283,7 +289,7 @@ export class WebUI {
     const tmp_icon = toCString(icon);
     const tmp_icon_type = toCString(icon_type);
 
-    webui.webui_set_icon(this.handle, tmp_icon.ptr, tmp_icon_type.ptr);
+    webui.webui_set_icon(this._handle, tmp_icon.ptr, tmp_icon_type.ptr);
   }
 
   /**
@@ -347,7 +353,7 @@ export class WebUI {
     const tmp_functionName = toCString(functionName);
     const ptr = arrayToPtr(raw);
     webui.webui_send_raw(
-      this.handle,
+      this._handle,
       tmp_functionName.ptr,
       ptr,
       raw.byteLength,
@@ -364,7 +370,7 @@ export class WebUI {
    * ```
    */
   setHide(status: boolean) {
-    webui.webui_set_hide(this.handle, status);
+    webui.webui_set_hide(this._handle, status);
   }
 
   /**
@@ -380,7 +386,7 @@ export class WebUI {
    */
   setSize(width: number, height: number) {
     if (width >= 0 && height >= 0) {
-      webui.webui_set_size(this.handle, width, height);
+      webui.webui_set_size(this._handle, width, height);
     } else {
       // TODO: maybe should throw an error
     }
@@ -398,7 +404,7 @@ export class WebUI {
    */
   setPosition(x: number, y: number) {
     if (x >= 0 && y >= 0) {
-      webui.webui_set_position(this.handle, x, y);
+      webui.webui_set_position(this._handle, x, y);
     } else {
       // TODO: maybe should throw an error
     }
@@ -419,7 +425,7 @@ export class WebUI {
   setProfile(name: string, path: string) {
     const tmp_name = toCString(name);
     const tmp_path = toCString(path);
-    webui.webui_set_profile(this.handle, tmp_name.ptr, tmp_path.ptr);
+    webui.webui_set_profile(this._handle, tmp_name.ptr, tmp_path.ptr);
   }
 
   /**
@@ -435,7 +441,7 @@ export class WebUI {
    */
   setProxy(proxy_server: string) {
     const tmp_proxy_server = toCString(proxy_server);
-    webui.webui_set_proxy(this.handle, tmp_proxy_server.ptr);
+    webui.webui_set_proxy(this._handle, tmp_proxy_server.ptr);
   }
 
   /**
@@ -449,7 +455,7 @@ export class WebUI {
    * ```
    */
   getUrl() {
-    const res = webui.webui_get_url(this.handle);
+    const res = webui.webui_get_url(this._handle);
     return res.toString();
   }
 
@@ -464,7 +470,7 @@ export class WebUI {
    * ```
    */
   setPublic(status: boolean) {
-    webui.webui_set_public(this.handle, status);
+    webui.webui_set_public(this._handle, status);
   }
 
   /**
@@ -479,7 +485,7 @@ export class WebUI {
    */
   navigate(url: string) {
     const tmp_url = toCString(url);
-    webui.webui_navigate(this.handle, tmp_url.ptr);
+    webui.webui_navigate(this._handle, tmp_url.ptr);
   }
 
   /**
@@ -525,7 +531,7 @@ export class WebUI {
    * @note This can break functionality of other windows if using the same web-browser.
    */
   deleteProfile() {
-    webui.webui_delete_profile(this.handle);
+    webui.webui_delete_profile(this._handle);
   }
 
   /**
@@ -540,7 +546,7 @@ export class WebUI {
    * ```
    */
   getParentProcessID(): number {
-    const res = webui.webui_get_parent_process_id(this.handle);
+    const res = webui.webui_get_parent_process_id(this._handle);
     return Number(res);
   }
 
@@ -556,7 +562,7 @@ export class WebUI {
    * ```
    */
   getChildProcessID(): number {
-    const res = webui.webui_get_child_process_id(this.handle);
+    const res = webui.webui_get_child_process_id(this._handle);
     return Number(res);
   }
 
@@ -573,7 +579,7 @@ export class WebUI {
    * ```
    */
   setPort(port: number): boolean {
-    return webui.webui_set_port(this.handle, port);
+    return webui.webui_set_port(this._handle, port);
   }
 
   /**
@@ -628,7 +634,7 @@ export class WebUI {
    */
   run(script: string) {
     const tmp_script = toCString(script);
-    webui.webui_run(this.handle, tmp_script.ptr);
+    webui.webui_run(this._handle, tmp_script.ptr);
   }
 
   /**
@@ -648,7 +654,7 @@ export class WebUI {
     const tmp_script = toCString(script);
     const tmp_arr = arrayToPtr(buffer);
     return webui.webui_script(
-      this.handle,
+      this._handle,
       tmp_script.ptr,
       timeout,
       tmp_arr,
@@ -657,6 +663,7 @@ export class WebUI {
   }
 
   /**
+   *
    * Chose between Deno and Nodejs as runtime for .js and .ts files.
    *
    * @param runtime Deno | Nodejs
@@ -667,6 +674,332 @@ export class WebUI {
    * ```
    */
   setRuntime(runtime: Runtimes) {
-    webui.webui_set_runtime(this.handle, runtime);
+    webui.webui_set_runtime(this._handle, runtime);
+  }
+
+  /**
+   *
+   * Get an argument as integer at a specific index
+   *
+   * @param Event
+   * @param index The argument position starting from 0
+   * @return Returns argument as integer
+   * @example
+   * ```ts
+   * const arg = WebUI.getIntAt(e, 0);
+   * ```
+   */
+  static getIntAt(e: Event, index: number): number {
+    const res = webui.webui_get_int_at(e.ptr, index);
+    return Number(res);
+  }
+
+  /**
+   *
+   * Get the first argument as integer
+   *
+   * @param Event
+   * @return Returns argument as integer
+   * @example
+   * ```ts
+   * const arg = WebUI.getInt(e);
+   * ```
+   */
+  static getInt(e: Event) {
+    return webui.webui_get_int(e.ptr);
+  }
+
+  /**
+   *
+   * Get an argument as string at a specific index
+   *
+   * @param Event
+   * @param index The argument position starting from 0
+   * @return Returns argument as string
+   * @example
+   * ```ts
+   * const arg = WebUI.getStringAt(e, 0);
+   * ```
+   */
+  static getStringAt(e: Event, index: number): string {
+    const res = webui.webui_get_string_at(e.ptr, index);
+    return res.toString();
+  }
+
+  /**
+   *
+   * Get the first argument as string
+   *
+   * @param Event
+   * @return Returns argument as string
+   * @example
+   * ```ts
+   * const arg = WebUI.getString(e);
+   * ```
+   */
+  static getString(e: Event): string {
+    const res = webui.webui_get_string(e.ptr);
+    return res.toString();
+  }
+
+  /**
+   *
+   * Get an argument as boolean at a specific index
+   *
+   * @param Event
+   * @param index The argument position starting from 0
+   * @return Returns argument as boolean
+   * @example
+   * ```ts
+   * const arg = WebUI.getBoolAt(e, 0);
+   * ```
+   */
+  static getBoolAt(e: Event, index: number): boolean {
+    return webui.webui_get_bool_at(e.ptr, index);
+  }
+
+  /**
+   *
+   * Get the first argument as boolean
+   *
+   * @param Event
+   * @return Returns argument as boolean
+   * @example
+   * ```ts
+   * const arg = WebUI.getBool(e, 0);
+   * ```
+   */
+  static getBool(e: Event): boolean {
+    return webui.webui_get_bool(e.ptr);
+  }
+
+  /**
+   *
+   * Get the size in bytes of an argument at a specific index
+   *
+   * @param Event
+   * @param index The argument position starting from 0
+   * @return Returns size in bytes
+   * @example
+   * ```ts
+   * const size = WebUI.getSizeAt(e, 0);
+   * ```
+   */
+  static getSizeAt(e: Event, index: number): number {
+    const res = webui.webui_get_size_at(e.ptr, index);
+    return Number(res);
+  }
+
+  /**
+   *
+   * Get size in bytes of the first argument
+   *
+   * @param Event
+   * @return Returns size in bytes
+   * @example
+   * ```ts
+   * const size = WebUI.getSize(e);
+   * ```
+   */
+  static getSize(e: Event): number {
+    const res = webui.webui_get_size(e.ptr);
+    return Number(res);
+  }
+
+  /**
+   *
+   * Return the response to JavaScript as integer
+   *
+   * @param e Event
+   * @param number The integer to be send to JavaScript
+   * @example
+   * ```ts
+   * WebUI.returnInt(e, 123);
+   * ```
+   */
+  static returnInt(e: Event, number: number | bigint) {
+    webui.webui_return_int(e.ptr, number);
+  }
+
+  /**
+   *
+   * Return the response to JavaScript as string
+   *
+   * @param e Event
+   * @param str The string to be send to JavaScript
+   * @example
+   * ```ts
+   * WebUI.returnString(e, "666");
+   * ```
+   */
+  static returnString(e: Event, str: string) {
+    const tmp_str = toCString(str);
+    webui.webui_return_string(e.ptr, tmp_str.ptr);
+  }
+
+  /**
+   *
+   * Return the response to JavaScript as boolean
+   *
+   * @param e Event
+   * @param bool The boolean to be send to JavaScript
+   * @example
+   * ```ts
+   * WebUI.returnString(e, "666");
+   * ```
+   */
+  static returnBool(e: Event, bool: boolean) {
+    webui.webui_return_bool(e.ptr, bool);
+  }
+
+  /**
+   *
+   * Bind a specific HTML element click event with a function. Empty element means all events.
+   *
+   * @param element The element ID
+   * @param callback
+   * @return Returns unique bind ID
+   * @example
+   * ```
+   * myWindow.interfaceBind("myID", myCallback);
+   * ```
+   */
+  interfaceBind(element: string, callback: InterfaceBindCallback): number {
+    const tmp_element = toCString(element);
+    const res = webui.webui_interface_bind(
+      this._handle,
+      tmp_element.ptr,
+      callback.ptr,
+    );
+    return Number(res);
+  }
+
+  /**
+   *
+   * When using `interfaceBind()`, you may need this function to easily set a response.
+   *
+   * @param event_number The event number
+   * @param response The response as string to be send to JavaScript
+   * @example
+   * ```
+   * myWindow.interfaceSetResponse(e.event_number, "Response...");
+   * ```
+   */
+  interfaceSetResponse(event_number: number, response: string) {
+    const tmp_response = toCString(response);
+    webui.webui_interface_set_response(
+      this._handle,
+      event_number,
+      tmp_response.ptr,
+    );
+  }
+
+  /**
+   *
+   * Check if the app still running.
+   *
+   * @return Returns True if app is running
+   *
+   * @example
+   * ```ts
+   * const status = WebUI.interfaceIsAppRunning();
+   * ```
+   */
+  static interfaceIsAppRunning(): boolean {
+    return webui.webui_interface_is_app_running();
+  }
+
+  /**
+   *
+   * Get a unique window ID.
+   *
+   * @return Returns the unique window ID as integer
+   * @example
+   * ```
+   * const id = myWindow.InterfaceGetWindowID();
+   * ```
+   */
+  InterfaceGetWindowID(): number {
+    const res = webui.webui_interface_get_window_id(this._handle);
+    return Number(res);
+  }
+
+  /**
+   *
+   * Get an argument as string at a specific index.
+   *
+   * @param event_number The event number
+   * @param index The argument position
+   * @return Returns argument as string
+   * @example
+   * ```
+   * const str = myWindow.InterfaceGetStringAt(e.event_number, 0);
+   * ```
+   */
+  InterfaceGetStringAt(event_number: number, index: number): string {
+    const res = webui.webui_interface_get_string_at(
+      this._handle,
+      event_number,
+      index,
+    );
+    return res.toString();
+  }
+
+  /**
+   *
+   * Get an argument as integer at a specific index.
+   *
+   * @param event_number The event number
+   * @param index The argument position
+   * @return Returns argument as integer
+   * @example
+   * ```
+   * const res = myWindow.InterfaceGetIntAt(e.event_number, 0);
+   * ```
+   */
+  InterfaceGetIntAt(event_number: number, index: number): number {
+    const res = webui.webui_interface_get_int_at(
+      this._handle,
+      event_number,
+      index,
+    );
+    return Number(res);
+  }
+
+  /**
+   *
+   * Get an argument as boolean at a specific index.
+   *
+   * @param event_number The event number
+   * @param index The argument position
+   * @return Returns argument as boolean
+   * @example
+   * ```
+   * const res = myWindow.InterfaceGetBoolAt(e.event_number, 0);
+   * ```
+   */
+  InterfaceGetBoolAt(event_number: number, index: number): boolean {
+    return webui.webui_interface_get_bool_at(this._handle, event_number, index);
+  }
+
+  /**
+   *
+   * Get the size in bytes of an argument at a specific index.
+   *
+   * @param event_number The event number
+   * @param index The argument position
+   * @return Returns size in bytes
+   * @example
+   * ```
+   * const size = myWindow.InterfaceGetSizeAt(e.event_number, 0);
+   * ```
+   */
+  InterfaceGetSizeAt(event_number: number, index: number): number {
+    const res = webui.webui_interface_get_size_at(
+      this._handle,
+      event_number,
+      index,
+    );
+    return Number(res);
   }
 }
