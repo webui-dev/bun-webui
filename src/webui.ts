@@ -1,6 +1,13 @@
-import { webui, BindCallback, SetFileHandlerCallbak, Browsers } from "./types";
+import {
+  webui,
+  BindCallback,
+  SetFileHandlerCallbak,
+  Browsers,
+  Runtimes,
+} from "./types";
 import { arrayToPtr, toCString } from "./utils";
 
+// Max windows, servers and threads
 const WEBUI_MAX_IDS = 256;
 
 const windows: Map<number, WebUI> = new Map();
@@ -11,6 +18,7 @@ export class WebUI {
   /**
    *
    * initialize a new WebUI window.
+   *
    * @returns WebUI instance.
    * @example
    * ```ts
@@ -22,6 +30,7 @@ export class WebUI {
   /**
    *
    * initialize a new WebUI window.
+   *
    * @param number window handle id
    * @returns WebUI instance.
    * @example
@@ -48,6 +57,7 @@ export class WebUI {
   /**
    *
    * get a valid window id.
+   *
    * @returns window is.
    * @example
    * ```ts
@@ -63,6 +73,7 @@ export class WebUI {
    *
    * Bind a specific html element click event with a function.
    * Empty element means all events.
+   *
    * @param element The HTML ID
    * @param BindCallback callback
    * @return Returns a unique bind ID.
@@ -82,6 +93,7 @@ export class WebUI {
    *
    * Show a window using embedded HTML, or a file.
    * If the window is already open, it will be refreshed.
+   *
    * @param string The HTML, URL, Or a local file
    * @return Returns True if showing the window is successed.
    * @example
@@ -99,6 +111,7 @@ export class WebUI {
   /**
    *
    * Same as `show()`. But using a specific web browser
+   *
    * @param string The HTML, URL, Or a local file
    * @param Browsers The web browser to be used
    * @return Returns True if showing the window is successed.
@@ -117,6 +130,7 @@ export class WebUI {
   /**
    *
    * Set the window in Kiosk mode (Full screen)
+   *
    * @param boolean status True or False
    * @example
    * ```ts
@@ -130,6 +144,7 @@ export class WebUI {
   /**
    *
    * Wait until all opened windows get closed.
+   *
    * @example
    * ```ts
    * myWindow.wait();
@@ -142,6 +157,7 @@ export class WebUI {
   /**
    *
    * Close a specific window only. The window object will still exist.
+   *
    * @example
    * ```ts
    * myWindow.close();
@@ -154,6 +170,7 @@ export class WebUI {
   /**
    *
    * Close a specific window and free all memory resources.
+   *
    * @example
    * ```ts
    * myWindow.destory();
@@ -166,6 +183,7 @@ export class WebUI {
   /**
    *
    * Close all open windows. `wait()` will return (Break).
+   *
    * @example
    * ```ts
    * WebUI.exit();
@@ -178,6 +196,7 @@ export class WebUI {
   /**
    *
    * Set the web-server root folder path for a specific window.
+   *
    * @param string The local folder full path
    * @return Returns True if setting root floader is successed.
    * @example
@@ -194,6 +213,7 @@ export class WebUI {
    *
    * Set the web-server root folder path for all windows.
    * Should be used before `show()`.
+   *
    * @param string The local folder full path
    * @return Returns True if setting default root floader is successed.
    * @example
@@ -209,6 +229,7 @@ export class WebUI {
   /**
    *
    * Close all open windows. `wait()` will return (Break).
+   *
    * @param SetFileHandlerCallbak callback for the file handler
    * @example
    * ```ts
@@ -222,6 +243,7 @@ export class WebUI {
   /**
    *
    * Check if the window is still running.
+   *
    * @return Returns True if the window is running.
    * @example
    * ```ts
@@ -235,6 +257,7 @@ export class WebUI {
   /**
    *
    * Set the maximum time in seconds to wait for the browser to start.
+   *
    * @example
    * ```ts
    * WebUI.setTimeout(5);
@@ -247,6 +270,7 @@ export class WebUI {
   /**
    *
    * Set the default embedded HTML favicon.
+   *
    * @param icon The icon as string: `<svg>...</svg>`
    * @param icon_type The icon type: `image/svg+xml`
    * @example
@@ -311,6 +335,7 @@ export class WebUI {
   /**
    *
    * Safely send raw data to the UI.
+   *
    * @param string the function name
    * @param raw The raw data buffer
    * @example
@@ -345,6 +370,7 @@ export class WebUI {
   /**
    *
    * Set the window size.
+   *
    * @param width - The width of the window.
    * @param height - The height of the window.
    * @example
@@ -365,6 +391,7 @@ export class WebUI {
    *
    * @param x - The x-coordinate of the window.
    * @param y - The y-coordinate of the window.
+   * @example
    * ```ts
    * myWindow.setPosition(100, 100);
    * ```
@@ -377,5 +404,269 @@ export class WebUI {
     }
   }
 
-  setProfile() {}
+  /**
+   *
+   * Set the web browser profile to use.
+   * An empty `name` and `path` means the default user profile.
+   *
+   * @param name The web browser profile name
+   * @param path The web browser profile full path
+   * @example
+   * ```ts
+   * myWindow.setProfile("Bar", "/Home/Foo/Bar");
+   * ```
+   */
+  setProfile(name: string, path: string) {
+    const tmp_name = toCString(name);
+    const tmp_path = toCString(path);
+    webui.webui_set_profile(this.handle, tmp_name.ptr, tmp_path.ptr);
+  }
+
+  /**
+   *
+   * Set the web browser proxy_server to use.
+   * Need to be called before `show()`.
+   *
+   * @param proxy_server The web browser proxy_server
+   * @example
+   * ```ts
+   * myWindow.setProxy("http://127.0.0.1:8888");
+   * ```
+   */
+  setProxy(proxy_server: string) {
+    const tmp_proxy_server = toCString(proxy_server);
+    webui.webui_set_proxy(this.handle, tmp_proxy_server.ptr);
+  }
+
+  /**
+   *
+   * Get the full current URL.
+   *
+   * @returns Returns the full URL string
+   * @example
+   * ```ts
+   * const url = myWindow.getUrl();
+   * ```
+   */
+  getUrl() {
+    const res = webui.webui_get_url(this.handle);
+    return res.toString();
+  }
+
+  /**
+   *
+   * Allow a specific window address to be accessible from a public network.
+   *
+   * @param status True or False
+   * @example
+   * ```ts
+   * myWindow.setPublic(true);
+   * ```
+   */
+  setPublic(status: boolean) {
+    webui.webui_set_public(this.handle, status);
+  }
+
+  /**
+   *
+   * Navigate to a specific URL.
+   *
+   * @param url Full HTTP URL
+   * @example
+   * ```ts
+   * myWindow.navigate("http://domain.com");
+   * ```
+   */
+  navigate(url: string) {
+    const tmp_url = toCString(url);
+    webui.webui_navigate(this.handle, tmp_url.ptr);
+  }
+
+  /**
+   *
+   * Free all memory resources. Should be called only at the end.
+   *
+   * @example
+   * ```ts
+   * WebUI.wait();
+   * WebUI.clean();
+   * ```
+   */
+  static clean() {
+    webui.webui_clean();
+  }
+
+  /**
+   *
+   * Delete all local web-browser profiles folder.
+   * It should called at the end.
+   *
+   * @example
+   * ```ts
+   * WebUI.wait();
+   * WebUI.deleteAllProfiles();
+   * WebUI.clean();
+   * ```
+   */
+  static deleteAllProfiles() {
+    webui.webui_delete_all_profiles();
+  }
+
+  /**
+   *
+   * Delete a specific window web-browser local folder profile.
+   *
+   * @example
+   * ```ts
+   * WebUI.wait();
+   * myWindow.deleteProfile();
+   * WebUI.clean();
+   * ```
+   * @note This can break functionality of other windows if using the same web-browser.
+   */
+  deleteProfile() {
+    webui.webui_delete_profile(this.handle);
+  }
+
+  /**
+   *
+   * Get the ID of the parent process.
+   * The web browser may re-create another new process.
+   *
+   * @return Returns the the parent process id as integer
+   * @example
+   * ```ts
+   * const id = myWindow.getParentProcessID();
+   * ```
+   */
+  getParentProcessID(): number {
+    const res = webui.webui_get_parent_process_id(this.handle);
+    return Number(res);
+  }
+
+  /**
+   *
+   * Get the ID of the last child process.
+   * The web browser may re-create another new process.
+   *
+   * @return Returns the the child process id as integer
+   * @example
+   * ```ts
+   * const id = myWindow.getChildProcessID();
+   * ```
+   */
+  getChildProcessID(): number {
+    const res = webui.webui_get_child_process_id(this.handle);
+    return Number(res);
+  }
+
+  /**
+   *
+   * Set a custom web-server network port to be used by WebUI.
+   * This can be useful to determine the HTTP link of `webui.js` in case
+   * you are trying to use WebUI with an external web-server like NGNIX
+   *
+   * @param port The web-server network port WebUI should use
+   * @return Returns True if the port is free and usable by WebUI
+   * ```ts
+   * const result = myWindow.setPort(8080);
+   * ```
+   */
+  setPort(port: number): boolean {
+    return webui.webui_set_port(this.handle, port);
+  }
+
+  /**
+   * Set the SSL/TLS certificate and the private key content, both in PEM
+   * format. This works only with `webui-2-secure` library. If set empty WebUI
+   * will generate a self-signed certificate.
+   *
+   * @param certificate_pem The SSL/TLS certificate content in PEM format
+   * @param private_key_pem The private key content in PEM format
+   *
+   * @return Returns True if the certificate and the key are valid.
+   *
+   * @example
+   * ```
+   * let ret =WebUI.setTlsCertificate("-----BEGINCERTIFICATE-----\n...",
+   * "-----BEGIN PRIVATE KEY-----\n...");
+   * ```
+   */
+  static setTlsCertificate<T extends ArrayBuffer | string>(
+    certificate_pem: T,
+    private_key_pem: T,
+  ) {
+    if (
+      certificate_pem instanceof ArrayBuffer &&
+      private_key_pem instanceof ArrayBuffer
+    ) {
+      const tmp_certificate_pem = arrayToPtr(certificate_pem);
+      const tmp_private_key_pem = arrayToPtr(private_key_pem);
+      return webui.webui_set_tls_certificate(
+        tmp_certificate_pem,
+        tmp_private_key_pem,
+      );
+    }
+
+    const tmp_certificate_pem = toCString(certificate_pem as string);
+    const tmp_private_key_pem = toCString(private_key_pem as string);
+    return webui.webui_set_tls_certificate(
+      tmp_certificate_pem.ptr,
+      tmp_private_key_pem.ptr,
+    );
+  }
+
+  /**
+   *
+   * Run JavaScript without waiting for the response.
+   *
+   * @param script The JavaScript to be run
+   * @example
+   * ```ts
+   * myWindow.run("alert('Hello');");
+   * ```
+   */
+  run(script: string) {
+    const tmp_script = toCString(script);
+    webui.webui_run(this.handle, tmp_script.ptr);
+  }
+
+  /**
+   *
+   * Run JavaScript and get the response back.
+   * Make sure your local buffer can hold the response.
+   *
+   * @param script The JavaScript to be run
+   * @param timeout The execution timeout
+   * @param buffer The local buffer to hold the response
+   * @example
+   * ```ts
+   * const is_successed = myWindow.script("return 4 + 6;", 0, myBuffer);
+   * ```
+   */
+  script(script: string, timeout: number, buffer: Uint8Array): boolean {
+    const tmp_script = toCString(script);
+    const tmp_arr = arrayToPtr(buffer);
+    return webui.webui_script(
+      this.handle,
+      tmp_script.ptr,
+      timeout,
+      tmp_arr,
+      buffer.byteLength,
+    );
+  }
+
+  /**
+   * Chose between Deno and Nodejs as runtime for .js and .ts files.
+   *
+   * @param runtime Deno | Nodejs
+   *
+   * @example
+   * ```ts
+   * myWindow.setRuntime(Runtimes.Deno);
+   * ```
+   */
+  setRuntime(runtime: Runtimes) {
+    webui.webui_set_runtime(this.handle, runtime);
+  }
 }

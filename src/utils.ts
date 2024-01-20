@@ -16,6 +16,6 @@ export function toCString(value: string): CString {
  * @param {ArrayBuffer} array
  * @returns pointer
  */
-export function arrayToPtr(array: ArrayBuffer) {
+export function arrayToPtr(array: NodeJS.TypedArray|ArrayBufferLike) {
   return ptr(array, 0);
 }
