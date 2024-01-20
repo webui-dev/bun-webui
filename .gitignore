@@ -174,3 +174,4 @@ dist
 # Finder (MacOS) folder config
 .DS_Store
 type_gen/zig-cache
+src/libwebui.so
