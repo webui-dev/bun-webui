@@ -336,7 +336,7 @@ export class WebUI {
     // TODO: res.ptr maybe null
   }
 
-  // TODO: whether we should adapt free and malloc?
+  // NOTE: we did not provide webui_free and webui_malloc
 
   /**
    *
@@ -349,15 +349,25 @@ export class WebUI {
    * myWindow.sendRaw("myJavascriptFunction", myBuffer);
    * ```
    */
-  sendRaw(functionName: string, raw: ArrayBuffer) {
+  sendRaw(functionName: string, raw: ArrayBuffer | string) {
     const tmp_functionName = toCString(functionName);
-    const ptr = arrayToPtr(raw);
-    webui.webui_send_raw(
-      this._handle,
-      tmp_functionName.ptr,
-      ptr,
-      raw.byteLength,
-    );
+    if (raw instanceof ArrayBuffer) {
+      const ptr = arrayToPtr(raw);
+      webui.webui_send_raw(
+        this._handle,
+        tmp_functionName.ptr,
+        ptr,
+        raw.byteLength,
+      );
+    } else {
+      const tmp_raw = toCString(raw);
+      webui.webui_send_raw(
+        this._handle,
+        tmp_functionName.ptr,
+        tmp_raw.ptr,
+        tmp_raw.byteLength as number,
+      );
+    }
   }
 
   /**
@@ -1003,3 +1013,12 @@ export class WebUI {
     return Number(res);
   }
 }
+
+export {
+  Event,
+  BindCallback,
+  SetFileHandlerCallbak,
+  Browsers,
+  Runtimes,
+  InterfaceBindCallback,
+};
