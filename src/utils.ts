@@ -1,4 +1,6 @@
 import { CString, ptr, type Pointer } from "bun:ffi";
+import os from "os";
+import path from "path";
 
 /**
  * Convert a String to C-String.
@@ -18,4 +20,26 @@ export function toCString(value: string): CString {
  */
 export function arrayToPtr(array: NodeJS.TypedArray | ArrayBufferLike) {
   return ptr(array, 0);
+}
+
+export let lib_path = "";
+
+const current_path = import.meta.dir;
+
+switch (os.platform()) {
+  case "linux":
+    lib_path = path.join(current_path, "libs", "libwebui.so");
+    break;
+
+  case "win32":
+    lib_path = path.join(current_path, "libs", "webui.dll");
+    break;
+
+  case "darwin":
+    lib_path = path.join(current_path, "libs", "libwebui.dylib");
+    break;
+
+  default:
+    console.log("sorry, not support current platform");
+    process.exit(1);
 }
