@@ -14,6 +14,7 @@ export const { close, symbols: c_webui } = dlopen(lib_path, {
     returns: "usize",
   },
 
+  // ok
   webui_get_new_window_id: {
     args: [],
     returns: "usize",
@@ -24,6 +25,7 @@ export const { close, symbols: c_webui } = dlopen(lib_path, {
     returns: "usize",
   },
 
+  // ok
   webui_get_best_browser: {
     args: ["usize"],
     returns: "usize",
@@ -40,21 +42,26 @@ export const { close, symbols: c_webui } = dlopen(lib_path, {
     returns: "bool",
   },
 
+  // ok
   webui_show_browser: {
     args: ["usize", "cstring", "usize"],
     returns: "bool",
   },
 
+  // ok
   webui_start_server: {
     args: ["usize", "cstring"],
     returns: "cstring",
   },
 
+  // TODO: Need to wait for issue reply verification
+  // https://github.com/webui-dev/webui/issues/496
   webui_show_wv: {
     args: ["usize", "cstring"],
     returns: "bool",
   },
 
+  // ok
   webui_set_kiosk: {
     args: ["usize", "bool"],
   },
@@ -68,6 +75,7 @@ export const { close, symbols: c_webui } = dlopen(lib_path, {
     returns: "bool",
   },
 
+  // ok
   webui_browser_exist: {
     args: ["usize"],
     returns: "bool",
@@ -149,14 +157,17 @@ export const { close, symbols: c_webui } = dlopen(lib_path, {
     args: ["pointer", "cstring", "pointer", "usize"],
   },
 
+  // ok
   webui_set_hide: {
     args: ["usize", "bool"],
   },
 
+  // ok
   webui_set_size: {
     args: ["usize", "u32", "u32"],
   },
 
+  // ok
   webui_set_position: {
     args: ["usize", "u32", "u32"],
   },
@@ -169,6 +180,7 @@ export const { close, symbols: c_webui } = dlopen(lib_path, {
     args: ["usize", "cstring"],
   },
 
+  // ok
   webui_get_url: {
     args: ["usize"],
     returns: "cstring",

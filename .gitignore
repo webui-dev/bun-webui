@@ -177,3 +177,4 @@ type_gen/zig-cache
 src/libwebui.so
 src/libs
 libs
+examples/test 
