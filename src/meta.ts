@@ -26,3 +26,11 @@ if (!existsSync(lib_path)) {
 } else {
   debug("lib exists");
 }
+
+export const isLittleEndian = ((): boolean => {
+  const buffer = new ArrayBuffer(4);
+  const uint32Array = new Uint32Array(buffer);
+  const uint8Array = new Uint8Array(buffer);
+  uint32Array[0] = 0x01020304;
+  return uint8Array[0] === 0x04;
+})();

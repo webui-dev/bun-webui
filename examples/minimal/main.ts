@@ -1,4 +1,4 @@
-import { WebUI } from "../../src/webui"
+import { WebUI } from "../../src/webui";
 
 const content =
   '<html><head><script src="webui.js"></script></head> Hello World ! </html>';

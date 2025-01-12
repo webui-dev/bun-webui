@@ -1,13 +1,14 @@
 import { dlopen } from "bun:ffi";
 import { lib_path } from "./meta";
 
-export const { close, symbols:c_webui } = dlopen(lib_path, {
+export const { close, symbols: c_webui } = dlopen(lib_path, {
   // ok
   webui_new_window: {
     args: [],
     returns: "usize",
   },
 
+  // ok
   webui_new_window_id: {
     args: ["usize"],
     returns: "usize",
