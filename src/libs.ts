@@ -99,6 +99,7 @@ export const { close, symbols: c_webui } = dlopen(lib_path, {
     args: ["usize"],
   },
 
+  // ok
   webui_exit: {
     args: [],
   },

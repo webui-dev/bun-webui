@@ -1,6 +1,6 @@
 import { c_webui } from "./libs";
 import { isLittleEndian } from "./meta";
-import { CString, ptr, toArrayBuffer } from "bun:ffi";
+import { CString, JSCallback, ptr, toArrayBuffer } from "bun:ffi";
 import type { Pointer } from "bun:ffi";
 
 const stringToPtr = (content: string): Pointer => {
@@ -20,8 +20,11 @@ const ptrToCstring = (pointer: Pointer | number): CString => {
   return new CString(_ptr);
 };
 
+export type callFunc = (event: Event) => void;
+
 export class WebUI {
   private _window_id: bigint;
+  private _callbacks: JSCallback[] = [];
 
   constructor(id?: number) {
     if (id == undefined) {
@@ -32,6 +35,10 @@ export class WebUI {
     const _id = BigInt(id);
     this._window_id = c_webui.webui_new_window_id(_id);
     return;
+  }
+
+  close() {
+    for (let i = 0; i < this._callbacks.length; i++) this._callbacks[i].close();
   }
 
   get windowId(): number {
@@ -47,6 +54,26 @@ export class WebUI {
       );
     }
     return c_webui.webui_show(this._window_id, stringToPtr(content));
+  }
+
+  // TODO: 待测试
+  bind(element: string, func: callFunc) {
+    const _ptr = stringToPtr(element);
+
+    const _callback = new JSCallback(
+      (ptr: Pointer) => {
+        const _event: Event = new Event(ptr);
+        func(_event);
+      },
+      {
+        args: ["pointer"],
+        threadsafe: true,
+      },
+    );
+
+    this._callbacks.push(_callback);
+
+    c_webui.webui_bind(this._window_id, _ptr, _callback.ptr);
   }
 
   startServer(content: string): string {
@@ -92,6 +119,10 @@ export class WebUI {
     c_webui.webui_wait();
   }
 
+  static clean() {
+    c_webui.webui_clean();
+  }
+
   static getNewWindowId(): number {
     return Number(c_webui.webui_get_new_window_id());
   }
@@ -103,6 +134,10 @@ export class WebUI {
   static getBestBrowser(): Browser {
     const _browser = c_webui.webui_get_best_browser();
     return Number(_browser) as Browser;
+  }
+
+  static exit() {
+    c_webui.webui_exit();
   }
 }
 
