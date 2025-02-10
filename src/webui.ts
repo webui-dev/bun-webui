@@ -263,6 +263,7 @@ export class WebUI {
       {
         returns: "void",
         args: ["usize", "usize", "pointer", "usize", "usize"],
+        threadsafe: true,
       },
     );
     // Pass the callback pointer to WebUI.
