@@ -18,10 +18,6 @@
 
 </div>
 
-## Download
-
-- [Latest Stable Release](https://github.com/webui-dev/bun-webui/releases) (NOT USABLE YET - UNDERDEVELOPMENT)
-
 ## Features
 
 - Portable (*Needs only a web browser or a WebView at runtime*)
