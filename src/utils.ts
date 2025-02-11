@@ -31,12 +31,12 @@ async function downloadFile(url: string, dest: string) {
  * Run a system command.
  */
 async function runCommand(cmd: string, args: string[]): Promise<void> {
-  const process = spawn({
+  const process = Bun.spawn({
     cmd: [cmd, ...args],
     stdout: "pipe",
     stderr: "pipe",
   });
-  const { exitCode } = await process.exited;
+  const exitCode = await process.exited;
   if (exitCode !== 0) {
     throw new Error(`Command "${cmd}" failed with exit code ${exitCode}`);
   }
