@@ -101,3 +101,5 @@ myWindow.show(myHtml);
 await WebUI.wait();
 
 console.log("Thank you.");
+
+process.exit(0);
