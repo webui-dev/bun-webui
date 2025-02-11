@@ -332,6 +332,11 @@ export function loadLib() {
         args: [],
         returns: "usize",
       },
+      webui_memcpy: {
+        // void webui_memcpy(void* dest, void* src, size_t count)
+        args: ["pointer", "pointer", "usize"],
+        returns: "void",
+      },
     } as const,
   );
 }

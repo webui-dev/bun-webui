@@ -8,10 +8,11 @@
   Canada.
 */
 
-import { dlopen, JSCallback } from "bun:ffi";
+import { CString } from "bun:ffi";
 import { loadLib } from "./lib.ts";
 import {
   BindCallback,
+  BindFileHandlerCallback,
   Datatypes,
   Usize,
   WebUIEvent,
@@ -24,6 +25,158 @@ const windows: Map<Usize, WebUI> = new Map();
 
 // Global lib entry
 let _lib: WebUILib;
+
+// Bun Worker
+// Since Bun is not fully thread-safe, making WebUI calling `.bind()` cause Bun to crash, so instead
+// we should use workers with option `threadsafe: true`.
+//
+// This is how it work:
+//  [UserFunction] --> [Bind] --> [Worker] -> [WebUI]
+//  [WebUI] --> [Worker] --> [ffiWorker.onmessage] --> [UserFunction]
+
+const ffiWorker = new Worker(new URL("./ffi_worker.ts", import.meta.url).href, { type: "module" });
+const pendingResponses = new Map<string, { resolve: (v: any) => void; reject: (e: any) => void }>();
+let callbackRegistry: BindCallback<any>[] = [];
+let callbackFileHandlerRegistry: BindFileHandlerCallback<any>[] = [];
+ffiWorker.onmessage = async (event: MessageEvent) => {
+  const { id, action, result, error, data } = event.data;
+  if (action === "invokeCallback") {
+    const {
+      callbackIndex,
+      param_window,
+      param_event_type,
+      param_element,
+      param_event_number,
+      param_bind_id
+    } = data;
+    const callbackFn = callbackRegistry[callbackIndex];
+    if (typeof callbackFn !== "undefined") {
+
+      // Window
+      const win = param_window;
+
+      // Event Type
+      const event_type =
+        typeof param_event_type === "bigint"
+          ? Number(param_event_type)
+          : Math.trunc(param_event_type);
+
+      // Element
+      const element =
+        param_element !== null
+          ? new CString(param_element)
+          : "";
+
+      // Event Number
+      const event_number =
+        typeof param_event_number === "bigint"
+          ? Number(param_event_number)
+          : Math.trunc(param_event_number);
+
+      // Bind ID
+      const bind_id =
+        typeof param_bind_id === "bigint"
+          ? Number(param_bind_id)
+          : Math.trunc(param_bind_id);
+          
+      // Arguments
+      const args = {
+        number: (index: number): number => {
+          return Number(_lib.symbols.webui_interface_get_int_at(BigInt(win), BigInt(event_number), BigInt(index)));
+        },
+        string: (index: number): string => {
+          return new CString(
+            _lib.symbols.webui_interface_get_string_at(BigInt(win), BigInt(event_number), BigInt(index))
+          );
+        },
+        boolean: (index: number): boolean => {
+          return _lib.symbols.webui_interface_get_bool_at(BigInt(win), BigInt(event_number), BigInt(index));
+        },
+      };
+
+      // Calling user callback
+      const e: WebUIEvent = {
+        window: windows.get(win)!,
+        eventType: event_type,
+        eventNumber: event_number,
+        element: element,
+        arg: args,
+      };
+      const result: string = (await callbackFn(e) as string) ?? '';
+
+      // Set response back to WebUI
+      _lib.symbols.webui_interface_set_response(
+        BigInt(win),
+        BigInt(event_number),
+        toCString(result),
+      );
+    }
+  } else if (action === "invokeFileHandler") {
+    const {
+      callbackIndex,
+      windowId,
+      param_url,
+      param_length
+    } = data;
+    const callbackFileHandlerFn = callbackFileHandlerRegistry[callbackIndex];
+    if (typeof callbackFileHandlerFn !== "undefined") {
+
+      // Get URL as string
+      const url_str :string = param_url !== null ? 
+      new CString(param_url) : "";
+
+      // Create URL Obj
+      const url_obj :URL = new URL(url_str, "http://localhost");
+
+      // Call the user callback
+      const user_response: string|Uint8Array = await callbackFileHandlerFn(url_obj);
+
+      // We can pass a local buffer to WebUI like this: 
+      // `return user_response;` However, this may create 
+      // a memory leak because WebUI cannot free it, or cause
+      // memory corruption as Bun may free the buffer before 
+      // WebUI uses it. Therefore, the solution is to create 
+      // a safe WebUI buffer through WebUI API. This WebUI 
+      // buffer will be automatically freed by WebUI later.
+      const webui_ptr :number = _lib.symbols.webui_malloc(BigInt(user_response.length));
+
+      // Copy data to C safe buffer
+      if (typeof user_response === "string") {
+        // copy `user_response` to `webui_ptr` as String data
+        const cString = toCString(user_response);
+        _lib.symbols.webui_memcpy(webui_ptr, cString, BigInt(cString.length));
+      } else {
+        // copy `user_response` to `webui_ptr` as Uint8Array data
+        _lib.symbols.webui_memcpy(webui_ptr, user_response, BigInt(user_response.length));
+      }
+
+      // Send back the response
+      _lib.symbols.webui_interface_set_response_file_handler(
+        BigInt(windowId),
+        webui_ptr,
+        BigInt(user_response.length),
+      );
+    }
+  } else if (id) {
+    const pending = pendingResponses.get(id);
+    if (pending) {
+      if (error) pending.reject(error);
+      else pending.resolve(result);
+      pendingResponses.delete(id);
+    }
+  }
+};
+
+function postToWorker(message: any): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const id = Math.random().toString(36).substring(2) + Date.now().toString();
+    message.id = id;
+    pendingResponses.set(id, { resolve, reject });
+    ffiWorker.postMessage(message);
+  });
+}
+
+// WebUI Class
 
 export class WebUI {
   #window: Usize = 0;
@@ -200,132 +353,52 @@ export class WebUI {
     id: string,
     callback: BindCallback<T>,
   ) {
-    // Create the callback using Bun's JSCallback API.
-    const callbackResource = new JSCallback(
-      (
-        param_window: number | bigint,
-        param_event_type: number | bigint,
-        param_element: any,
-        param_event_number: number | bigint,
-        param_bind_id: number | bigint,
-      ) => {
-        console.log("*** Bun Callback Worked ! ***");
-
-        // TODO: Uncomment this section after fixing Bun callback issue
-
-        // const win = param_window;
-        // const event_type =
-        //   typeof param_event_type === "bigint"
-        //     ? Number(param_event_type)
-        //     : Math.trunc(param_event_type);
-        // const element =
-        //   param_element !== null
-        //     ? new Bun.UnsafePointerView(param_element).getCString()
-        //     : "";
-        // const event_number =
-        //   typeof param_event_number === "bigint"
-        //     ? Number(param_event_number)
-        //     : Math.trunc(param_event_number);
-        // const bind_id =
-        //   typeof param_bind_id === "bigint"
-        //     ? Number(param_bind_id)
-        //     : Math.trunc(param_bind_id);
-
-        // const args = {
-        //   number: (index: number): number => {
-        //     return Number(this.#lib.symbols.webui_interface_get_int_at(BigInt(win), BigInt(event_number), BigInt(index)));
-        //   },
-        //   string: (index: number): string => {
-        //     return new Bun.UnsafePointerView(
-        //       this.#lib.symbols.webui_interface_get_string_at(BigInt(win), BigInt(event_number), BigInt(index))
-        //     ).getCString();
-        //   },
-        //   boolean: (index: number): boolean => {
-        //     return this.#lib.symbols.webui_interface_get_bool_at(BigInt(win), BigInt(event_number), BigInt(index));
-        //   },
-        // };
-
-        // const e: WebUIEvent = {
-        //   window: windows.get(win)!,
-        //   eventType: event_type,
-        //   eventNumber: event_number,
-        //   element: element,
-        //   arg: args,
-        // };
-
-        // const result: string = (callback(e) as string) ?? "";
-        // this.#lib.symbols.webui_interface_set_response(
-        //   BigInt(this.#window),
-        //   BigInt(event_number),
-        //   toCString(result),
-        // );
+    // Save the user callback function in the registry and obtain its index.
+    const index = callbackRegistry.push(callback) - 1;
+    // Send a message to the worker with callback index.
+    postToWorker({
+      action: "bind",
+      data: {
+        windowId: this.#window.toString(),
+        elementId: id,
+        callbackIndex: index,
       },
-      {
-        returns: "void",
-        args: ["usize", "usize", "pointer", "usize", "usize"],
-        threadsafe: true,
-      },
-    );
-    // Pass the callback pointer to WebUI.
-    this.#lib.symbols.webui_interface_bind(
-      BigInt(this.#window),
-      toCString(id),
-      callbackResource,
-    );
+    }).catch((error) => {
+      throw new WebUIError("Binding callback failed: " + error);
+    });
   }
 
   /**
    * Sets a custom files handler to respond to HTTP requests.
    */
-  setFileHandler(callback: (url: URL) => string | Uint8Array) {
-    // Disable auto waiting for window connection.
+  setFileHandler(callback: (url: URL) => Promise<string | Uint8Array>) {
+    // C: .show_wait_connection = false; // 0
+    // Disable `.show()` auto waiting for window connection,
+    // otherwise `.setFileHandler()` will be blocked.
     _lib.symbols.webui_set_config(BigInt(0), false);
-    // Disable WebUI cookies.
+
+    // C: .use_cookies = false; // 4
+    // We need to disable WebUI Cookies because
+    // user will use his own custom HTTP header
+    // in `.setFileHandler()`.
     _lib.symbols.webui_set_config(BigInt(4), false);
-    // Mark that a custom file handler is in use.
+
+    // Let `.show()` knows that the user is using `.setFileHandler()`
+    // so no need to wait for window connection in `.show()`.
     this.#isFileHandler = true;
 
-    const callbackResource = new JSCallback(
-      (param_url: any, param_length: any) => {
-        const url_str: string =
-          param_url !== null
-            ? new Bun.UnsafePointerView(param_url).getCString()
-            : "";
-        const url_obj: URL = new URL(url_str, "http://localhost");
-        const user_response: string | Uint8Array = callback(url_obj);
-
-        const webui_buffer: any = _lib.symbols.webui_malloc(BigInt(user_response.length));
-
-        if (typeof user_response === "string") {
-          const cString = toCString(user_response);
-          const webui_buffer_ref = new Uint8Array(
-            Bun.UnsafePointerView.getArrayBuffer(webui_buffer, cString.byteLength)
-          );
-          webui_buffer_ref.set(new Uint8Array(cString));
-        } else {
-          const webui_buffer_ref = new Uint8Array(
-            Bun.UnsafePointerView.getArrayBuffer(webui_buffer, user_response.byteLength)
-          );
-          webui_buffer_ref.set(user_response);
-        }
-
-        this.#lib.symbols.webui_interface_set_response_file_handler(
-          BigInt(this.#window),
-          webui_buffer,
-          BigInt(user_response.length),
-        );
-        return webui_buffer;
+    // Save the user callback function in the registry and obtain its index.
+    const index = callbackFileHandlerRegistry.push(callback) - 1;
+    // Send a message to the worker with callback index.
+    postToWorker({
+      action: "setFileHandler",
+      data: {
+        windowId: this.#window.toString(),
+        callbackIndex: index,
       },
-      {
-        returns: "pointer",
-        args: ["pointer", "pointer"],
-      },
-    );
-    // Pass the callback pointer to WebUI.
-    this.#lib.symbols.webui_set_file_handler(
-      BigInt(this.#window),
-      callbackResource,
-    );
+    }).catch((error) => {
+      throw new WebUIError("Setting file handler failed: " + error);
+    });
   }
 
   /**
@@ -401,9 +474,9 @@ export class WebUI {
    * Get the full current URL.
    */
   getUrl(): string {
-    return new Bun.UnsafePointerView(
+    return new CString(
       this.#lib.symbols.webui_get_url(BigInt(this.#window))
-    ).getCString();
+    );
   }
 
   /**
@@ -633,9 +706,9 @@ export class WebUI {
    */
   static encode(str: string): string {
     WebUI.init();
-    return new Bun.UnsafePointerView(
+    return new CString(
       _lib.symbols.webui_encode(toCString(str))
-    ).getCString();
+    );
   }
 
   /**
@@ -643,9 +716,9 @@ export class WebUI {
    */
   static decode(str: string): string {
     WebUI.init();
-    return new Bun.UnsafePointerView(
+    return new CString(
       _lib.symbols.webui_decode(toCString(str))
-    ).getCString();
+    );
   }
 
   /**

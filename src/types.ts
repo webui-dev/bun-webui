@@ -4,6 +4,7 @@ import { loadLib } from "./lib.ts";
 export type Usize = number | bigint;
 
 export type BindCallback<T extends Datatypes | undefined | void> = (event: WebUIEvent) => T | Promise<T>;
+export type BindFileHandlerCallback<T extends Datatypes | undefined | void> = (url: URL) => T | Promise<T>;
 
 export interface WebUIEvent {
   window: WebUI;
