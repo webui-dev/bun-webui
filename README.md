@@ -42,14 +42,14 @@ is written in Bun using WebUI as the GUI library.
 
 ## Installation
 
-Specific version: `import { WebUI } from "https://bun.sh/x/webui@2.5.0/mod.ts";`
+Specific version: `import { WebUI } from "webui";`
 
 Latest version: `import { WebUI } from "https://bun.sh/x/webui/mod.ts";`
 
 ## Minimal Example
 
 ```js
-import { WebUI } from "https://bun.sh/x/webui@2.5.0/mod.ts";
+import { WebUI } from "webui";
 
 const myWindow = new WebUI();
 myWindow.show('<html><script src="webui.js"></script> Hello World! </html>');

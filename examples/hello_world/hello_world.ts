@@ -5,7 +5,7 @@
 import { WebUI } from "../../mod.ts";
 
 // To import from online `https://bun.sh` (Production)
-// import { WebUI } from "https://bun.sh/x/webui@2.5.0/mod.ts";
+// import { WebUI } from "webui";
 
 const myHtml = `<!DOCTYPE html>
 <html>

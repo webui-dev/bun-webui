@@ -16,7 +16,7 @@
  * ## Minimal Example
  *
  * ```ts
- * import { WebUI } from "https://bun.sh/x/webui@2.5.0/mod.ts";
+ * import { WebUI } from "webui";
  *
  * const myWindow = new WebUI();
  * myWindow.show("<html><script src=\"webui.js\"></script> Hello World! </html>");
