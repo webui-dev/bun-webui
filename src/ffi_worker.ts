@@ -1,5 +1,5 @@
 /*
-  WebUI Bun 2.5.0
+  WebUI Bun 2.5.1
   http://webui.me
   https://github.com/webui-dev/bun-webui
   Copyright (c) 2020-2025 Hassan Draga.

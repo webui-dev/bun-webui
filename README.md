@@ -2,9 +2,7 @@
 
 ![Logo](https://raw.githubusercontent.com/webui-dev/webui-logo/main/webui_bun.png)
 
-# NOT USABLE YET - UNDERDEVELOPMENT
-
-# Bun-WebUI v2.5.0 (Beta)
+# Bun-WebUI v2.5.1 (Beta)
 
 [last-commit]: https://img.shields.io/github/last-commit/webui-dev/webui?style=for-the-badge&logo=github&logoColor=C0CAF5&labelColor=414868
 [release-version]: https://img.shields.io/github/v/tag/webui-dev/webui?style=for-the-badge&logo=webtrees&logoColor=C0CAF5&labelColor=414868&color=7664C6
@@ -40,16 +38,22 @@ is written in Bun using WebUI as the GUI library.
 
 ![ScreenShot](img/webui_bun_example.png)
 
-## Installation
+## NPM Installation
 
-Specific version: `import { WebUI } from "webui";`
+```sh
+npm install @webui-dev/bun-webui
+```
 
-Latest version: `import { WebUI } from "https://bun.sh/x/webui/mod.ts";`
+## Import Package
+
+```js
+import { WebUI } from '@webui-dev/bun-webui';
+```
 
 ## Minimal Example
 
 ```js
-import { WebUI } from "webui";
+import { WebUI } from '@webui-dev/bun-webui';
 
 const myWindow = new WebUI();
 myWindow.show('<html><script src="webui.js"></script> Hello World! </html>');

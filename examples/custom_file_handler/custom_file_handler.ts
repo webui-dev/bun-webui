@@ -2,10 +2,10 @@
 // bun run custom_file_handler.ts
 
 // To import from local (Debugging and Development)
-import { WebUI } from "../../mod.ts";
+// import { WebUI } from "../../mod.ts";
 
-// To import from online `https://bun.sh` (Production)
-// import { WebUI } from "webui";
+// To import from NPM (Production)
+import { WebUI } from '@webui-dev/bun-webui';
 
 // Return HTTP header + file raw binary content
 const getFile = async (contentType: string, filename: string): Promise<Uint8Array> => {
