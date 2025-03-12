@@ -39,12 +39,12 @@ async function getLibName() {
     case "darwin":
       switch (process.arch) {
         case "x64":
-          fileName = "webui-macos-clang-x64/webui-2.dylib";
-          localFileName = "./webui-2.dylib";
+          fileName = "webui-macos-clang-x64/libwebui-2.dylib";
+          localFileName = "./libwebui-2.dylib";
           break;
         case "arm64":
-          fileName = "webui-macos-clang-arm64/webui-2.dylib";
-          localFileName = "./webui-2.dylib";
+          fileName = "webui-macos-clang-arm64/libwebui-2.dylib";
+          localFileName = "./libwebui-2.dylib";
           break;
         default:
           throw new Error(`Unsupported architecture ${process.arch} for macOS`);
@@ -55,12 +55,12 @@ async function getLibName() {
     default:
       switch (process.arch) {
         case "x64":
-          fileName = "webui-linux-gcc-x64/webui-2.so";
-          localFileName = "./webui-2.so";
+          fileName = "webui-linux-gcc-x64/libwebui-2.so";
+          localFileName = "./libwebui-2.so";
           break;
         case "arm64":
-          fileName = "webui-linux-gcc-arm64/webui-2.so";
-          localFileName = "./webui-2.so";
+          fileName = "webui-linux-gcc-arm64/libwebui-2.so";
+          localFileName = "./libwebui-2.so";
           break;
         default:
           throw new Error(`Unsupported architecture ${process.arch} for ${process.platform}`);
