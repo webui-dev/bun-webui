@@ -160,7 +160,7 @@ export async function downloadCoreLibrary() {
   }
 
   // Copy library
-  const libFile = `libwebui-2.${ext}`;
+  const libFile = process.platform === "win32" ? `webui-2.${ext}` : `libwebui-2.${ext}`;
   await createDirectory(outputDir);
   await copyFileOverwrite(joinPath(cacheDir, fileName, libFile), joinPath(outputDir, libFile));
 
