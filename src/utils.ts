@@ -156,11 +156,11 @@ export async function downloadCoreLibrary() {
   if (process.platform === "win32") {
     await runCommand("tar", ["-xf", zipPath, "-C", cacheDir]);
   } else {
-    await runCommand("unzip", ["-q", zipPath, "-d", cacheDir]);
+    await runCommand("unzip", ["-o", "-q", zipPath, "-d", cacheDir]);
   }
 
   // Copy library
-  const libFile = `webui-2.${ext}`;
+  const libFile = process.platform === "win32" ? `webui-2.${ext}` : `libwebui-2.${ext}`;
   await createDirectory(outputDir);
   await copyFileOverwrite(joinPath(cacheDir, fileName, libFile), joinPath(outputDir, libFile));
 
