@@ -588,6 +588,76 @@ export class WebUI {
     );
   }
 
+  /**
+   * Get the network port of a running window.
+   */
+  getPort(): number {
+    return Number(this.#lib.symbols.webui_get_port(BigInt(this.#window)));
+  }
+
+  /**
+   * Centers the window on the screen. Call before show() for best results.
+   */
+  setCenter(): void {
+    this.#lib.symbols.webui_set_center(BigInt(this.#window));
+  }
+
+  /**
+   * Control if UI events should be processed one at a time in a single blocking thread.
+   */
+  setEventBlocking(status: boolean): void {
+    this.#lib.symbols.webui_set_event_blocking(BigInt(this.#window), status);
+  }
+
+  /**
+   * Make a WebView window frameless.
+   */
+  setFrameless(status: boolean): void {
+    this.#lib.symbols.webui_set_frameless(BigInt(this.#window), status);
+  }
+
+  /**
+   * Make a WebView window transparent.
+   */
+  setTransparent(status: boolean): void {
+    this.#lib.symbols.webui_set_transparent(BigInt(this.#window), status);
+  }
+
+  /**
+   * Set whether the window frame is resizable or fixed. Works only on WebView window.
+   */
+  setResizable(status: boolean): void {
+    this.#lib.symbols.webui_set_resizable(BigInt(this.#window), status);
+  }
+
+  /**
+   * Minimize a WebView window.
+   */
+  minimize(): void {
+    this.#lib.symbols.webui_minimize(BigInt(this.#window));
+  }
+
+  /**
+   * Maximize a WebView window.
+   */
+  maximize(): void {
+    this.#lib.symbols.webui_maximize(BigInt(this.#window));
+  }
+
+  /**
+   * Get window HWND (Win32) or GtkWindow pointer (Linux).
+   */
+  getHwnd(): any {
+    return this.#lib.symbols.webui_get_hwnd(BigInt(this.#window));
+  }
+
+  /**
+   * Get Win32 window HWND. More reliable with WebView than web browser window.
+   */
+  win32GetHwnd(): any {
+    return this.#lib.symbols.webui_win32_get_hwnd(BigInt(this.#window));
+  }
+
   // Static methods
 
   /**
@@ -751,6 +821,38 @@ export class WebUI {
   static clean() {
     WebUI.init();
     _lib.symbols.webui_clean();
+  }
+
+  /**
+   * Get a free window number that can be used with newWindowId().
+   */
+  static getNewWindowId(): number {
+    WebUI.init();
+    return Number(_lib.symbols.webui_get_new_window_id());
+  }
+
+  /**
+   * Create a new window using a specified window number.
+   */
+  static newWindowId(windowNumber: number): number {
+    WebUI.init();
+    return Number(_lib.symbols.webui_new_window_id(BigInt(windowNumber)));
+  }
+
+  /**
+   * Set custom browser folder path.
+   */
+  static setBrowserFolder(path: string): void {
+    WebUI.init();
+    _lib.symbols.webui_set_browser_folder(toCString(path));
+  }
+
+  /**
+   * Get the HTTP mime type of a file.
+   */
+  static getMimeType(file: string): string {
+    WebUI.init();
+    return new CString(_lib.symbols.webui_get_mime_type(toCString(file)));
   }
 
   static get version() {

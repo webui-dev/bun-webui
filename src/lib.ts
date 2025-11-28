@@ -337,6 +337,76 @@ export function loadLib() {
         args: ["pointer", "pointer", "usize"],
         returns: "void",
       },
+      webui_new_window_id: {
+        // size_t webui_new_window_id(size_t window_number)
+        args: ["usize"],
+        returns: "usize",
+      },
+      webui_get_new_window_id: {
+        // size_t webui_get_new_window_id(void)
+        args: [],
+        returns: "usize",
+      },
+      webui_get_port: {
+        // size_t webui_get_port(size_t window)
+        args: ["usize"],
+        returns: "usize",
+      },
+      webui_set_center: {
+        // void webui_set_center(size_t window)
+        args: ["usize"],
+        returns: "void",
+      },
+      webui_set_browser_folder: {
+        // void webui_set_browser_folder(const char* path)
+        args: ["buffer"],
+        returns: "void",
+      },
+      webui_set_event_blocking: {
+        // void webui_set_event_blocking(size_t window, bool status)
+        args: ["usize", "bool"],
+        returns: "void",
+      },
+      webui_set_frameless: {
+        // void webui_set_frameless(size_t window, bool status)
+        args: ["usize", "bool"],
+        returns: "void",
+      },
+      webui_set_transparent: {
+        // void webui_set_transparent(size_t window, bool status)
+        args: ["usize", "bool"],
+        returns: "void",
+      },
+      webui_set_resizable: {
+        // void webui_set_resizable(size_t window, bool status)
+        args: ["usize", "bool"],
+        returns: "void",
+      },
+      webui_get_mime_type: {
+        // const char* webui_get_mime_type(const char* file)
+        args: ["buffer"],
+        returns: "pointer",
+      },
+      webui_minimize: {
+        // void webui_minimize(size_t window)
+        args: ["usize"],
+        returns: "void",
+      },
+      webui_maximize: {
+        // void webui_maximize(size_t window)
+        args: ["usize"],
+        returns: "void",
+      },
+      webui_get_hwnd: {
+        // void* webui_get_hwnd(size_t window)
+        args: ["usize"],
+        returns: "pointer",
+      },
+      webui_win32_get_hwnd: {
+        // void* webui_win32_get_hwnd(size_t window)
+        args: ["usize"],
+        returns: "pointer",
+      },
     } as const,
   );
 }
