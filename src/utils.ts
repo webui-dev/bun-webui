@@ -70,6 +70,9 @@ export const currentModulePath = (() => {
   let directory = new URL(import.meta.url).pathname;
   const isWindows = process.platform === "win32";
   if (isWindows) {
+    if (directory.startsWith("/B:/%7EBUN/") && directory.endsWith(".exe")) {
+      directory = Bun.pathToFileURL("./dist.exe").pathname;
+    }
     if (directory.startsWith("/")) {
       // Remove first '/'
       directory = directory.slice(1);
