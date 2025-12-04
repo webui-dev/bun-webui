@@ -72,6 +72,8 @@ export const currentModulePath = (() => {
   if (isWindows) {
     if (directory.startsWith("/B:/%7EBUN/") && directory.endsWith(".exe")) {
       directory = Bun.pathToFileURL("./dist.exe").pathname;
+      //Handling special characters
+      directory = decodeURIComponent(directory);
     }
     if (directory.startsWith("/")) {
       // Remove first '/'
