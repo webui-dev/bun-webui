@@ -3,6 +3,7 @@
 
 import { promises as fs } from "fs";
 import { spawn } from "bun";
+import { homedir } from "os";
 
 // The WebUI core version to download
 const WebUICoreVersion = "2.5.0-beta.3";
@@ -85,8 +86,11 @@ export const currentModulePath = (() => {
 
   // hacky fix for EACCESS when being used in a single-file-executable in Bun
   if (directory.includes("$bunfs")) {
-    // Redirect to a fallback directory
-    directory = resolve(process.cwd(), "vfs");
+    // Redirect to a fallback directory'
+    directory = resolve(homedir(), ".bun-webui");
+    try {
+      createDirectory(directory)
+    } catch {/* it probably already exists. */ }
   }
 
   const pathSeparator = isWindows ? "\\" : "/";
