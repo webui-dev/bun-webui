@@ -3,6 +3,7 @@
 
 import { promises as fs } from "fs";
 import { spawn } from "bun";
+import { homedir } from "os";
 
 // The WebUI core version to download
 const WebUICoreVersion = "2.5.0-beta.3";
@@ -82,15 +83,30 @@ export const currentModulePath = (() => {
     // Replace all forward slashes with backslashes for Windows paths
     directory = directory.replaceAll("/", "\\");
   }
+
+  // hacky fix for EACCESS when being used in a single-file-executable in Bun
+  if (directory.includes("$bunfs")) {
+    // Redirect to a fallback directory'
+    directory = resolve(homedir(), ".bun-webui");
+    try {
+      createDirectory(directory)
+    } catch {/* it probably already exists. */ }
+  }
+
   const pathSeparator = isWindows ? "\\" : "/";
   const lastIndex = directory.lastIndexOf(pathSeparator);
+
+  // Remove any trailing part after the last path separator
   directory = directory.substring(0, lastIndex + 1);
+
   if (directory === "") {
-    return "." + pathSeparator;
+    return `.${pathSeparator}`;
   }
+
   if (directory.startsWith("/x/")) {
-    return "." + pathSeparator + directory.slice(1).replace(/\//g, pathSeparator);
+    return `.${pathSeparator}${directory.slice(1).replace(/\//g, pathSeparator)}`;
   }
+
   return directory;
 })();
 
