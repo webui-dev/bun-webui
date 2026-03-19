@@ -23,6 +23,9 @@ import { fromCString, toCString, WebUIError } from "./utils.ts";
 // Register windows to bind instance to WebUI.Event
 const windows: Map<Usize, WebUI> = new Map();
 
+// Per-window SharedArrayBuffers for close handler WV (allow-close flag)
+const closeHandlerBuffers: Map<bigint, SharedArrayBuffer> = new Map();
+
 // Global lib entry
 let _lib: WebUILib;
 
@@ -38,6 +41,8 @@ const ffiWorker = new Worker(new URL("./ffi_worker.ts", import.meta.url).href, {
 const pendingResponses = new Map<string, { resolve: (v: any) => void; reject: (e: any) => void }>();
 let callbackRegistry: BindCallback<any>[] = [];
 let callbackFileHandlerRegistry: BindFileHandlerCallback<any>[] = [];
+let callbackFileHandlerWindowRegistry: ((window: WebUI, url: URL) => Promise<string | Uint8Array>)[] = [];
+let callbackLoggerRegistry: ((level: number, message: string) => void)[] = [];
 ffiWorker.onmessage = async (event: MessageEvent) => {
   const { id, action, result, error, data } = event.data;
   if (action === "invokeCallback") {
@@ -78,11 +83,14 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
         typeof param_bind_id === "bigint"
           ? Number(param_bind_id)
           : Math.trunc(param_bind_id);
-          
+
       // Arguments
       const args = {
         number: (index: number): number => {
           return Number(_lib.symbols.webui_interface_get_int_at(BigInt(win), BigInt(event_number), BigInt(index)));
+        },
+        float: (index: number): number => {
+          return _lib.symbols.webui_interface_get_float_at(BigInt(win), BigInt(event_number), BigInt(index));
         },
         string: (index: number): string => {
           return new CString(
@@ -91,6 +99,9 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
         },
         boolean: (index: number): boolean => {
           return _lib.symbols.webui_interface_get_bool_at(BigInt(win), BigInt(event_number), BigInt(index));
+        },
+        size: (index: number): number => {
+          return Number(_lib.symbols.webui_interface_get_size_at(BigInt(win), BigInt(event_number), BigInt(index)));
         },
       };
 
@@ -122,7 +133,7 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
     if (typeof callbackFileHandlerFn !== "undefined") {
 
       // Get URL as string
-      const url_str :string = param_url !== null ? 
+      const url_str :string = param_url !== null ?
       new CString(param_url) : "";
 
       // Create URL Obj
@@ -131,12 +142,12 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
       // Call the user callback
       const user_response: string|Uint8Array = await callbackFileHandlerFn(url_obj);
 
-      // We can pass a local buffer to WebUI like this: 
-      // `return user_response;` However, this may create 
+      // We can pass a local buffer to WebUI like this:
+      // `return user_response;` However, this may create
       // a memory leak because WebUI cannot free it, or cause
-      // memory corruption as Bun may free the buffer before 
-      // WebUI uses it. Therefore, the solution is to create 
-      // a safe WebUI buffer through WebUI API. This WebUI 
+      // memory corruption as Bun may free the buffer before
+      // WebUI uses it. Therefore, the solution is to create
+      // a safe WebUI buffer through WebUI API. This WebUI
       // buffer will be automatically freed by WebUI later.
       const webui_ptr :number = _lib.symbols.webui_malloc(BigInt(user_response.length));
 
@@ -156,6 +167,44 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
         webui_ptr,
         BigInt(user_response.length),
       );
+    }
+  } else if (action === "invokeFileHandlerWindow") {
+    const {
+      callbackIndex,
+      windowId,
+      param_url,
+    } = data;
+    const callbackFn = callbackFileHandlerWindowRegistry[callbackIndex];
+    if (typeof callbackFn !== "undefined") {
+      const winId = typeof windowId === "bigint" ? windowId : BigInt(windowId);
+      const win = windows.get(winId);
+      if (!win) return;
+
+      const url_str: string = param_url !== null ? new CString(param_url) : "";
+      const url_obj: URL = new URL(url_str, "http://localhost");
+      const user_response: string | Uint8Array = await callbackFn(win, url_obj);
+
+      const webui_ptr: number = _lib.symbols.webui_malloc(BigInt(user_response.length));
+      if (typeof user_response === "string") {
+        const cString = toCString(user_response);
+        _lib.symbols.webui_memcpy(webui_ptr, cString, BigInt(cString.length));
+      } else {
+        _lib.symbols.webui_memcpy(webui_ptr, user_response, BigInt(user_response.length));
+      }
+
+      _lib.symbols.webui_interface_set_response_file_handler(
+        winId,
+        webui_ptr,
+        BigInt(user_response.length),
+      );
+    }
+  } else if (action === "invokeLogger") {
+    const { callbackIndex, param_level, param_log } = data;
+    const callbackFn = callbackLoggerRegistry[callbackIndex];
+    if (typeof callbackFn !== "undefined") {
+      const level = typeof param_level === "bigint" ? Number(param_level) : Math.trunc(param_level);
+      const message = param_log !== null ? new CString(param_log).toString() : "";
+      callbackFn(level, message);
     }
   } else if (id) {
     const pending = pendingResponses.get(id);
@@ -658,6 +707,69 @@ export class WebUI {
     return this.#lib.symbols.webui_win32_get_hwnd(BigInt(this.#window));
   }
 
+  /**
+   * Bring the window to the front and focus it.
+   */
+  focus(): void {
+    this.#lib.symbols.webui_focus(BigInt(this.#window));
+  }
+
+  /**
+   * Get the unique window ID.
+   */
+  get windowId(): number {
+    return Number(this.#lib.symbols.webui_interface_get_window_id(BigInt(this.#window)));
+  }
+
+  /**
+   * Set whether the WebView close button is allowed to close the window.
+   * Pass `true` to allow close (default), `false` to prevent it.
+   *
+   * Note: Due to the synchronous nature of the WebView close event, a full
+   * async callback is not supported. Use this method to set the flag at any
+   * time before the user clicks the close button.
+   */
+  setCloseHandlerWV(allowClose: boolean): void {
+    const winKey = BigInt(this.#window);
+    let buffer = closeHandlerBuffers.get(winKey);
+    if (!buffer) {
+      buffer = new SharedArrayBuffer(4);
+      closeHandlerBuffers.set(winKey, buffer);
+      postToWorker({
+        action: "setCloseHandlerWV",
+        data: {
+          windowId: this.#window.toString(),
+          sharedBuffer: buffer,
+        },
+      }).catch((error) => {
+        throw new WebUIError("Setting close handler failed: " + error);
+      });
+    }
+    Atomics.store(new Int32Array(buffer), 0, allowClose ? 1 : 0);
+  }
+
+  /**
+   * Sets a custom file handler with window context. The handler receives the
+   * window instance and the requested URL, and must return the full HTTP
+   * response (header + body) as a string or raw bytes.
+   * This deactivates any handler set with setFileHandler().
+   */
+  setFileHandlerWindow(callback: (window: WebUI, url: URL) => Promise<string | Uint8Array>): void {
+    _lib.symbols.webui_set_config(BigInt(0), false);
+    _lib.symbols.webui_set_config(BigInt(4), false);
+    this.#isFileHandler = true;
+    const index = callbackFileHandlerWindowRegistry.push(callback) - 1;
+    postToWorker({
+      action: "setFileHandlerWindow",
+      data: {
+        windowId: this.#window.toString(),
+        callbackIndex: index,
+      },
+    }).catch((error) => {
+      throw new WebUIError("Setting file handler failed: " + error);
+    });
+  }
+
   // Static methods
 
   /**
@@ -855,6 +967,51 @@ export class WebUI {
     return new CString(_lib.symbols.webui_get_mime_type(toCString(file)));
   }
 
+  /**
+   * Check if more windows are still open. Intended for WebView main-thread loops.
+   * Returns `true` if at least one window is still running, `false` otherwise.
+   *
+   * @example
+   * while (WebUI.waitAsync()) {
+   *   // run your main-thread work here
+   * }
+   */
+  static waitAsync(): boolean {
+    WebUI.init();
+    return _lib.symbols.webui_wait_async();
+  }
+
+  /**
+   * Set a custom logger function to receive WebUI log messages.
+   * The callback receives a log level (see `WebUI.LoggerLevel`) and the message string.
+   */
+  static setLogger(callback: (level: number, message: string) => void): void {
+    WebUI.init();
+    const index = callbackLoggerRegistry.push(callback) - 1;
+    postToWorker({
+      action: "setLogger",
+      data: { callbackIndex: index },
+    }).catch((error) => {
+      throw new WebUIError("Setting logger failed: " + error);
+    });
+  }
+
+  /**
+   * Get the last WebUI error code.
+   */
+  static getLastErrorNumber(): number {
+    WebUI.init();
+    return Number(_lib.symbols.webui_get_last_error_number());
+  }
+
+  /**
+   * Get the last WebUI error message.
+   */
+  static getLastErrorMessage(): string {
+    WebUI.init();
+    return new CString(_lib.symbols.webui_get_last_error_message());
+  }
+
   static get version() {
     return "2.5.4";
   }
@@ -877,6 +1034,7 @@ export namespace WebUI {
     Epic,
     Yandex,
     ChromiumBased,
+    Webview,
   }
   export enum EventType {
     Disconnected = 0,
@@ -884,5 +1042,16 @@ export namespace WebUI {
     MouseClick,
     Navigation,
     Callback,
+  }
+  export enum Runtime {
+    None = 0,
+    Deno,
+    NodeJS,
+    Bun,
+  }
+  export enum LoggerLevel {
+    Debug = 0,
+    Info,
+    Error,
   }
 }

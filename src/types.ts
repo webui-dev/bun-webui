@@ -13,8 +13,10 @@ export interface WebUIEvent {
   element: string;
   arg: {
     number: (index: number) => number;
+    float: (index: number) => number;
     string: (index: number) => string;
     boolean: (index: number) => boolean;
+    size: (index: number) => number;
   };
 }
 

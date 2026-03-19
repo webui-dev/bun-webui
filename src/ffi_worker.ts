@@ -79,5 +79,77 @@ self.onmessage = (event: MessageEvent) => {
     );
     _lib.symbols.webui_set_file_handler(windowId, callbackResource);
     self.postMessage({ id, result: "setFileHandler_success" });
+  } else if (action === "setFileHandlerWindow") {
+    // File Handler (with window context)
+    const windowId = BigInt(data.windowId);
+    const callbackIndex = data.callbackIndex;
+    const callbackResource = new JSCallback(
+      (
+        _param_window: number | bigint,
+        _param_url: number,
+        _param_length: number
+      ) => {
+        self.postMessage({
+          action: "invokeFileHandlerWindow",
+          data: {
+            callbackIndex,
+            windowId: _param_window,
+            param_url: _param_url,
+            param_length: _param_length,
+          },
+        });
+      },
+      {
+        returns: "pointer",
+        args: ["usize", "pointer", "pointer"],
+        threadsafe: true,
+      }
+    );
+    _lib.symbols.webui_set_file_handler_window(windowId, callbackResource);
+    self.postMessage({ id, result: "setFileHandlerWindow_success" });
+  } else if (action === "setCloseHandlerWV") {
+    // Close Handler for WebView window
+    // Uses a SharedArrayBuffer so the JSCallback can read the allow-close flag synchronously.
+    const windowId = BigInt(data.windowId);
+    const sharedBuffer: SharedArrayBuffer = data.sharedBuffer;
+    const view = new Int32Array(sharedBuffer);
+    const callbackResource = new JSCallback(
+      (_param_window: number | bigint) => {
+        return Atomics.load(view, 0) !== 0;
+      },
+      {
+        returns: "bool",
+        args: ["usize"],
+        threadsafe: true,
+      }
+    );
+    _lib.symbols.webui_set_close_handler_wv(windowId, callbackResource);
+    self.postMessage({ id, result: "setCloseHandlerWV_success" });
+  } else if (action === "setLogger") {
+    // Custom logger
+    const callbackIndex = data.callbackIndex;
+    const callbackResource = new JSCallback(
+      (
+        _param_level: number | bigint,
+        _param_log: number,
+        _param_user_data: number
+      ) => {
+        self.postMessage({
+          action: "invokeLogger",
+          data: {
+            callbackIndex,
+            param_level: _param_level,
+            param_log: _param_log,
+          },
+        });
+      },
+      {
+        returns: "void",
+        args: ["usize", "pointer", "pointer"],
+        threadsafe: true,
+      }
+    );
+    _lib.symbols.webui_set_logger(callbackResource, null);
+    self.postMessage({ id, result: "setLogger_success" });
   }
 };

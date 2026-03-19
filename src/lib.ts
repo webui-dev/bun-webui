@@ -407,6 +407,56 @@ export function loadLib() {
         args: ["usize"],
         returns: "pointer",
       },
+      webui_focus: {
+        // void webui_focus(size_t window)
+        args: ["usize"],
+        returns: "void",
+      },
+      webui_wait_async: {
+        // bool webui_wait_async(void)
+        args: [],
+        returns: "bool",
+      },
+      webui_set_close_handler_wv: {
+        // void webui_set_close_handler_wv(size_t window, bool (*close_handler)(size_t window))
+        args: ["usize", "function"],
+        returns: "void",
+      },
+      webui_set_file_handler_window: {
+        // void webui_set_file_handler_window(size_t window, const void* (*handler)(size_t window, const char* filename, int* length))
+        args: ["usize", "function"],
+        returns: "void",
+      },
+      webui_set_logger: {
+        // void webui_set_logger(void (*func)(size_t level, const char* log, void* user_data), void *user_data)
+        args: ["function", "pointer"],
+        returns: "void",
+      },
+      webui_get_last_error_number: {
+        // size_t webui_get_last_error_number()
+        args: [],
+        returns: "usize",
+      },
+      webui_get_last_error_message: {
+        // const char* webui_get_last_error_message()
+        args: [],
+        returns: "pointer",
+      },
+      webui_interface_get_float_at: {
+        // double webui_interface_get_float_at(size_t window, size_t event_number, size_t index)
+        args: ["usize", "usize", "usize"],
+        returns: "f64",
+      },
+      webui_interface_get_size_at: {
+        // size_t webui_interface_get_size_at(size_t window, size_t event_number, size_t index)
+        args: ["usize", "usize", "usize"],
+        returns: "usize",
+      },
+      webui_interface_get_window_id: {
+        // size_t webui_interface_get_window_id(size_t window)
+        args: ["usize"],
+        returns: "usize",
+      },
     } as const,
   );
 }
