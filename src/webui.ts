@@ -8,7 +8,7 @@
   Canada.
 */
 
-import { CString } from "bun:ffi";
+import { CString, type Pointer } from "bun:ffi";
 import { loadLib } from "./lib.js";
 import {
   BindCallback,
@@ -19,7 +19,6 @@ import {
   WebUILib,
 } from "./types.js";
 import { fromCString, toCString, WebUIError } from "./utils.js";
-import type { Pointer } from "bun:ffi";
 
 function ptrToString(ptr: Pointer | null): string {
   return ptr ? new CString(ptr).toString() : "";
