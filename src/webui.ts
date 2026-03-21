@@ -9,7 +9,7 @@
 */
 
 import { CString } from "bun:ffi";
-import { loadLib } from "./lib.ts";
+import { loadLib } from "./lib.js";
 import {
   BindCallback,
   BindFileHandlerCallback,
@@ -17,8 +17,8 @@ import {
   Usize,
   WebUIEvent,
   WebUILib,
-} from "./types.ts";
-import { fromCString, toCString, WebUIError } from "./utils.ts";
+} from "./types.js";
+import { fromCString, toCString, WebUIError } from "./utils.js";
 import type { Pointer } from "bun:ffi";
 
 function ptrToString(ptr: Pointer | null): string {
@@ -42,7 +42,7 @@ let _lib: WebUILib;
 //  [UserFunction] --> [Bind] --> [Worker] -> [WebUI]
 //  [WebUI] --> [Worker] --> [ffiWorker.onmessage] --> [UserFunction]
 
-const ffiWorker = new Worker(new URL("./ffi_worker.ts", import.meta.url).href, { type: "module" });
+const ffiWorker = new Worker(new URL("./ffi_worker.js", import.meta.url).href, { type: "module" });
 const pendingResponses = new Map<string, { resolve: (v: any) => void; reject: (e: any) => void }>();
 let callbackRegistry: BindCallback<any>[] = [];
 let callbackFileHandlerRegistry: BindFileHandlerCallback<any>[] = [];
@@ -81,10 +81,9 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
           : Math.trunc(param_event_number);
 
       // Bind ID
-      const bind_id =
-        typeof param_bind_id === "bigint"
-          ? Number(param_bind_id)
-          : Math.trunc(param_bind_id);
+      void (typeof param_bind_id === "bigint"
+        ? Number(param_bind_id)
+        : Math.trunc(param_bind_id));
 
       // Arguments
       const args = {
@@ -129,7 +128,6 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
       callbackIndex,
       windowId,
       param_url,
-      param_length
     } = data;
     const callbackFileHandlerFn = callbackFileHandlerRegistry[callbackIndex];
     if (typeof callbackFileHandlerFn !== "undefined") {
@@ -572,7 +570,7 @@ export class WebUI {
   }
 
   /**
-   * Choose between Bun and Node.js as runtime for .js and .ts files.
+   * Choose between Bun and Node.js as runtime for .js and .js files.
    */
   setRuntime(runtime: number): void {
     this.#lib.symbols.webui_set_runtime(BigInt(this.#window), BigInt(runtime));

@@ -9,8 +9,8 @@
 */
 
 import { JSCallback, type Pointer } from "bun:ffi";
-import { loadLib } from "./lib.ts";
-import { toCString } from "./utils.ts";
+import { loadLib } from "./lib.js";
+import { toCString } from "./utils.js";
 
 // Load the WebUI library inside the worker
 const _lib = loadLib();

@@ -87,8 +87,11 @@ csx/
 
 # Python
 __pycache__/
-dist/
 webui2.egg-info/
+
+# TypeScript
+dist/
+tsconfig.tsbuildinfo
 
 # Rust
 target/

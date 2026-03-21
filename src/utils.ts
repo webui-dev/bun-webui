@@ -2,12 +2,8 @@
 // Utilities
 
 import { promises as fs } from "fs";
-import { spawn } from "bun";
 import { homedir } from "os";
 import { resolve } from "path";
-
-// The WebUI core version to download
-const WebUICoreVersion = "2.5.0-beta.3";
 
 /**
  * Combine paths using the OS-specific separator.

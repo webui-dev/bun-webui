@@ -21,7 +21,10 @@ jobs:
           registry-url: 'https://registry.npmjs.org/'
 
       - name: Install dependencies
-        run: echo "Bun-WebUI has no dependencies for now."
+        run: npm ci
+
+      - name: Build
+        run: npm run build
 
       - name: Publish to NPM
         run: npm publish --access public

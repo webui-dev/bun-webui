@@ -2,14 +2,21 @@
   "name": "@webui-dev/bun-webui",
   "version": "2.5.4",
   "description": "Use any web browser as GUI, with Bun in the backend and HTML5 in the frontend.",
-  "main": "mod.ts",
-  "directories": {
-    "example": "examples"
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/mod.d.ts",
+      "default": "./dist/mod.js"
+    }
   },
+  "files": [
+    "dist",
+    "src"
+  ],
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc -b",
-    "test": "echo \"Error: no test specified\" && exit 0"
+    "prepublishOnly": "bun run build"
   },
   "keywords": [
     "gui",
