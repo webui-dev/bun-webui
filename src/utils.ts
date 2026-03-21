@@ -5,6 +5,9 @@ import { promises as fs } from "fs";
 import { homedir } from "os";
 import { resolve } from "path";
 
+// The WebUI core version to download
+// const WebUICoreVersion = "2.5.0-beta.3";
+
 /**
  * Combine paths using the OS-specific separator.
  * Replaces multiple separators with a single one.
@@ -201,4 +204,4 @@ export function fromCString(value: Uint8Array): string {
   return new TextDecoder().decode(value.slice(0, end));
 }
 
-export class WebUIError extends Error {}
+export class WebUIError extends Error { }
