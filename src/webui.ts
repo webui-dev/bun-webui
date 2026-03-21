@@ -25,10 +25,6 @@ function ptrToString(ptr: Pointer | null): string {
   return ptr ? new CString(ptr).toString() : "";
 }
 
-function ptrToNumber(ptr: Pointer | null): number {
-  return ptr ? Number(ptr) : 0;
-}
-
 // Register windows to bind instance to WebUI.Event
 const windows: Map<Usize, WebUI> = new Map();
 
@@ -142,10 +138,10 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
       const url_str = ptrToString(param_url);
 
       // Create URL Obj
-      const url_obj :URL = new URL(url_str, "http://localhost");
+      const url_obj: URL = new URL(url_str, "http://localhost");
 
       // Call the user callback
-      const user_response: string|Uint8Array = await callbackFileHandlerFn(url_obj);
+      const user_response: string | Uint8Array = await callbackFileHandlerFn(url_obj);
 
       // We can pass a local buffer to WebUI like this:
       // `return user_response;` However, this may create
@@ -208,7 +204,7 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
     const callbackFn = callbackLoggerRegistry[callbackIndex];
     if (typeof callbackFn !== "undefined") {
       const level = typeof param_level === "bigint" ? Number(param_level) : Math.trunc(param_level);
-      const message = param_log !== null ? new CString(param_log).toString() : "";
+      const message = ptrToString(param_log);
       callbackFn(level, message);
     }
   } else if (id) {
