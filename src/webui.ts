@@ -19,6 +19,15 @@ import {
   WebUILib,
 } from "./types.ts";
 import { fromCString, toCString, WebUIError } from "./utils.ts";
+import type { Pointer } from "bun:ffi";
+
+function ptrToString(ptr: Pointer | null): string {
+  return ptr ? new CString(ptr).toString() : "";
+}
+
+function ptrToNumber(ptr: Pointer | null): number {
+  return ptr ? Number(ptr) : 0;
+}
 
 // Register windows to bind instance to WebUI.Event
 const windows: Map<Usize, WebUI> = new Map();
@@ -67,10 +76,7 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
           : Math.trunc(param_event_type);
 
       // Element
-      const element =
-        param_element !== null
-          ? new CString(param_element)
-          : "";
+      const element = ptrToString(param_element);
 
       // Event Number
       const event_number =
@@ -93,7 +99,7 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
           return _lib.symbols.webui_interface_get_float_at(BigInt(win), BigInt(event_number), BigInt(index));
         },
         string: (index: number): string => {
-          return new CString(
+          return ptrToString(
             _lib.symbols.webui_interface_get_string_at(BigInt(win), BigInt(event_number), BigInt(index))
           );
         },
@@ -133,8 +139,7 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
     if (typeof callbackFileHandlerFn !== "undefined") {
 
       // Get URL as string
-      const url_str :string = param_url !== null ?
-      new CString(param_url) : "";
+      const url_str = ptrToString(param_url);
 
       // Create URL Obj
       const url_obj :URL = new URL(url_str, "http://localhost");
@@ -149,7 +154,7 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
       // WebUI uses it. Therefore, the solution is to create
       // a safe WebUI buffer through WebUI API. This WebUI
       // buffer will be automatically freed by WebUI later.
-      const webui_ptr :number = _lib.symbols.webui_malloc(BigInt(user_response.length));
+      const webui_ptr = _lib.symbols.webui_malloc(BigInt(user_response.length));
 
       // Copy data to C safe buffer
       if (typeof user_response === "string") {
@@ -180,11 +185,11 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
       const win = windows.get(winId);
       if (!win) return;
 
-      const url_str: string = param_url !== null ? new CString(param_url) : "";
+      const url_str = ptrToString(param_url);
       const url_obj: URL = new URL(url_str, "http://localhost");
       const user_response: string | Uint8Array = await callbackFn(win, url_obj);
 
-      const webui_ptr: number = _lib.symbols.webui_malloc(BigInt(user_response.length));
+      const webui_ptr = _lib.symbols.webui_malloc(BigInt(user_response.length));
       if (typeof user_response === "string") {
         const cString = toCString(user_response);
         _lib.symbols.webui_memcpy(webui_ptr, cString, BigInt(cString.length));
@@ -523,7 +528,7 @@ export class WebUI {
    * Get the full current URL.
    */
   getUrl(): string {
-    return new CString(
+    return ptrToString(
       this.#lib.symbols.webui_get_url(BigInt(this.#window))
     );
   }
@@ -588,7 +593,7 @@ export class WebUI {
    * Start only the web server and return the URL. No window will be shown.
    */
   startServer(content: string): string {
-    return fromCString(
+    return ptrToString(
       this.#lib.symbols.webui_start_server(BigInt(this.#window), toCString(content))
     );
   }
@@ -888,7 +893,7 @@ export class WebUI {
    */
   static encode(str: string): string {
     WebUI.init();
-    return new CString(
+    return ptrToString(
       _lib.symbols.webui_encode(toCString(str))
     );
   }
@@ -898,7 +903,7 @@ export class WebUI {
    */
   static decode(str: string): string {
     WebUI.init();
-    return new CString(
+    return ptrToString(
       _lib.symbols.webui_decode(toCString(str))
     );
   }
@@ -964,7 +969,7 @@ export class WebUI {
    */
   static getMimeType(file: string): string {
     WebUI.init();
-    return new CString(_lib.symbols.webui_get_mime_type(toCString(file)));
+    return ptrToString(_lib.symbols.webui_get_mime_type(toCString(file)));
   }
 
   /**
@@ -1009,7 +1014,7 @@ export class WebUI {
    */
   static getLastErrorMessage(): string {
     WebUI.init();
-    return new CString(_lib.symbols.webui_get_last_error_message());
+    return ptrToString(_lib.symbols.webui_get_last_error_message());
   }
 
   static get version() {

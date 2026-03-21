@@ -1,3 +1,6 @@
+# Dependencies
+node_modules
+
 # Bun binaries
 src/webui-windows-msvc-x64/
 src/webui-windows-msvc-arm/

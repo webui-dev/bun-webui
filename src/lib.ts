@@ -1,7 +1,7 @@
 // Bun WebUI
 // FFI (Foreign Function Interface) for webui.ts
 
-import { dlopen, suffix } from "bun:ffi";
+import { dlopen } from "bun:ffi";
 import { libName } from "../deps.ts";
 
 export function loadLib() {
