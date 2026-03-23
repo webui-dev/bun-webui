@@ -1,3 +1,6 @@
+# Dependencies
+node_modules
+
 # Bun binaries
 src/webui-windows-msvc-x64/
 src/webui-windows-msvc-arm/
@@ -84,8 +87,11 @@ csx/
 
 # Python
 __pycache__/
-dist/
 webui2.egg-info/
+
+# TypeScript
+dist/
+tsconfig.tsbuildinfo
 
 # Rust
 target/

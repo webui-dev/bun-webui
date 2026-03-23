@@ -26,4 +26,4 @@
  * @module
  * @license MIT
  */
-export { WebUI } from "./src/webui.ts";
+export { WebUI } from "./src/webui.js";

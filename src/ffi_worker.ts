@@ -8,9 +8,9 @@
   Canada.
 */
 
-import { JSCallback } from "bun:ffi";
-import { loadLib } from "./lib.ts";
-import { toCString } from "./utils.ts";
+import { JSCallback, type Pointer } from "bun:ffi";
+import { loadLib } from "./lib.js";
+import { toCString } from "./utils.js";
 
 // Load the WebUI library inside the worker
 const _lib = loadLib();
@@ -48,7 +48,7 @@ self.onmessage = (event: MessageEvent) => {
         args: ["usize", "usize", "pointer", "usize", "usize"],
         threadsafe: true,
       }
-    );
+    ) as any as Pointer;
     _lib.symbols.webui_interface_bind(windowId, toCString(elementId), callbackResource);
     self.postMessage({ id, result: "bind_success" });
   } else if (action === "setFileHandler") {
@@ -76,7 +76,7 @@ self.onmessage = (event: MessageEvent) => {
         args: ["pointer", "pointer"],
         threadsafe: true,
       }
-    );
+    ) as any as Pointer;
     _lib.symbols.webui_set_file_handler(windowId, callbackResource);
     self.postMessage({ id, result: "setFileHandler_success" });
   } else if (action === "setFileHandlerWindow") {
@@ -104,7 +104,7 @@ self.onmessage = (event: MessageEvent) => {
         args: ["usize", "pointer", "pointer"],
         threadsafe: true,
       }
-    );
+    ) as any as Pointer;
     _lib.symbols.webui_set_file_handler_window(windowId, callbackResource);
     self.postMessage({ id, result: "setFileHandlerWindow_success" });
   } else if (action === "setCloseHandlerWV") {
@@ -122,7 +122,7 @@ self.onmessage = (event: MessageEvent) => {
         args: ["usize"],
         threadsafe: true,
       }
-    );
+    ) as any as Pointer;
     _lib.symbols.webui_set_close_handler_wv(windowId, callbackResource);
     self.postMessage({ id, result: "setCloseHandlerWV_success" });
   } else if (action === "setLogger") {
@@ -148,7 +148,7 @@ self.onmessage = (event: MessageEvent) => {
         args: ["usize", "pointer", "pointer"],
         threadsafe: true,
       }
-    );
+    ) as any as Pointer;
     _lib.symbols.webui_set_logger(callbackResource, null);
     self.postMessage({ id, result: "setLogger_success" });
   }

@@ -1,11 +1,11 @@
 // Bun WebUI
-// Dependences needed by webui.ts
+// Dependences needed by webui.js
 
 import {
   fileExists,
   downloadCoreLibrary,
   currentModulePath,
-} from "./src/utils.ts";
+} from "./src/utils.js";
 
 /**
  * Determines the correct library filename based on the current operating system and CPU architecture.
@@ -13,7 +13,7 @@ import {
  *
  * @returns A promise that resolves to the path of the dynamic library.
  */
-async function getLibName() {
+export async function getLibName(): Promise<string> {
   let fileName = "";
   let localFileName = "";
 

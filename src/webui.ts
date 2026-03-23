@@ -8,8 +8,8 @@
   Canada.
 */
 
-import { CString } from "bun:ffi";
-import { loadLib } from "./lib.ts";
+import { CString, type Pointer } from "bun:ffi";
+import { loadLib } from "./lib.js";
 import {
   BindCallback,
   BindFileHandlerCallback,
@@ -17,8 +17,12 @@ import {
   Usize,
   WebUIEvent,
   WebUILib,
-} from "./types.ts";
-import { fromCString, toCString, WebUIError } from "./utils.ts";
+} from "./types.js";
+import { fromCString, toCString, WebUIError } from "./utils.js";
+
+function ptrToString(ptr: Pointer | null): string {
+  return ptr ? new CString(ptr).toString() : "";
+}
 
 // Register windows to bind instance to WebUI.Event
 const windows: Map<Usize, WebUI> = new Map();
@@ -37,7 +41,7 @@ let _lib: WebUILib;
 //  [UserFunction] --> [Bind] --> [Worker] -> [WebUI]
 //  [WebUI] --> [Worker] --> [ffiWorker.onmessage] --> [UserFunction]
 
-const ffiWorker = new Worker(new URL("./ffi_worker.ts", import.meta.url).href, { type: "module" });
+const ffiWorker = new Worker(new URL("./ffi_worker.js", import.meta.url).href, { type: "module" });
 const pendingResponses = new Map<string, { resolve: (v: any) => void; reject: (e: any) => void }>();
 let callbackRegistry: BindCallback<any>[] = [];
 let callbackFileHandlerRegistry: BindFileHandlerCallback<any>[] = [];
@@ -67,10 +71,7 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
           : Math.trunc(param_event_type);
 
       // Element
-      const element =
-        param_element !== null
-          ? new CString(param_element)
-          : "";
+      const element = ptrToString(param_element);
 
       // Event Number
       const event_number =
@@ -79,10 +80,9 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
           : Math.trunc(param_event_number);
 
       // Bind ID
-      const bind_id =
-        typeof param_bind_id === "bigint"
-          ? Number(param_bind_id)
-          : Math.trunc(param_bind_id);
+      void (typeof param_bind_id === "bigint"
+        ? Number(param_bind_id)
+        : Math.trunc(param_bind_id));
 
       // Arguments
       const args = {
@@ -93,7 +93,7 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
           return _lib.symbols.webui_interface_get_float_at(BigInt(win), BigInt(event_number), BigInt(index));
         },
         string: (index: number): string => {
-          return new CString(
+          return ptrToString(
             _lib.symbols.webui_interface_get_string_at(BigInt(win), BigInt(event_number), BigInt(index))
           );
         },
@@ -127,20 +127,18 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
       callbackIndex,
       windowId,
       param_url,
-      param_length
     } = data;
     const callbackFileHandlerFn = callbackFileHandlerRegistry[callbackIndex];
     if (typeof callbackFileHandlerFn !== "undefined") {
 
       // Get URL as string
-      const url_str :string = param_url !== null ?
-      new CString(param_url) : "";
+      const url_str = ptrToString(param_url);
 
       // Create URL Obj
-      const url_obj :URL = new URL(url_str, "http://localhost");
+      const url_obj: URL = new URL(url_str, "http://localhost");
 
       // Call the user callback
-      const user_response: string|Uint8Array = await callbackFileHandlerFn(url_obj);
+      const user_response: string | Uint8Array = await callbackFileHandlerFn(url_obj);
 
       // We can pass a local buffer to WebUI like this:
       // `return user_response;` However, this may create
@@ -149,7 +147,7 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
       // WebUI uses it. Therefore, the solution is to create
       // a safe WebUI buffer through WebUI API. This WebUI
       // buffer will be automatically freed by WebUI later.
-      const webui_ptr :number = _lib.symbols.webui_malloc(BigInt(user_response.length));
+      const webui_ptr = _lib.symbols.webui_malloc(BigInt(user_response.length));
 
       // Copy data to C safe buffer
       if (typeof user_response === "string") {
@@ -180,11 +178,11 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
       const win = windows.get(winId);
       if (!win) return;
 
-      const url_str: string = param_url !== null ? new CString(param_url) : "";
+      const url_str = ptrToString(param_url);
       const url_obj: URL = new URL(url_str, "http://localhost");
       const user_response: string | Uint8Array = await callbackFn(win, url_obj);
 
-      const webui_ptr: number = _lib.symbols.webui_malloc(BigInt(user_response.length));
+      const webui_ptr = _lib.symbols.webui_malloc(BigInt(user_response.length));
       if (typeof user_response === "string") {
         const cString = toCString(user_response);
         _lib.symbols.webui_memcpy(webui_ptr, cString, BigInt(cString.length));
@@ -203,7 +201,7 @@ ffiWorker.onmessage = async (event: MessageEvent) => {
     const callbackFn = callbackLoggerRegistry[callbackIndex];
     if (typeof callbackFn !== "undefined") {
       const level = typeof param_level === "bigint" ? Number(param_level) : Math.trunc(param_level);
-      const message = param_log !== null ? new CString(param_log).toString() : "";
+      const message = ptrToString(param_log);
       callbackFn(level, message);
     }
   } else if (id) {
@@ -523,7 +521,7 @@ export class WebUI {
    * Get the full current URL.
    */
   getUrl(): string {
-    return new CString(
+    return ptrToString(
       this.#lib.symbols.webui_get_url(BigInt(this.#window))
     );
   }
@@ -571,7 +569,7 @@ export class WebUI {
   }
 
   /**
-   * Choose between Bun and Node.js as runtime for .js and .ts files.
+   * Choose between Bun and Node.js as runtime for .js and .js files.
    */
   setRuntime(runtime: number): void {
     this.#lib.symbols.webui_set_runtime(BigInt(this.#window), BigInt(runtime));
@@ -588,7 +586,7 @@ export class WebUI {
    * Start only the web server and return the URL. No window will be shown.
    */
   startServer(content: string): string {
-    return fromCString(
+    return ptrToString(
       this.#lib.symbols.webui_start_server(BigInt(this.#window), toCString(content))
     );
   }
@@ -888,7 +886,7 @@ export class WebUI {
    */
   static encode(str: string): string {
     WebUI.init();
-    return new CString(
+    return ptrToString(
       _lib.symbols.webui_encode(toCString(str))
     );
   }
@@ -898,7 +896,7 @@ export class WebUI {
    */
   static decode(str: string): string {
     WebUI.init();
-    return new CString(
+    return ptrToString(
       _lib.symbols.webui_decode(toCString(str))
     );
   }
@@ -964,7 +962,7 @@ export class WebUI {
    */
   static getMimeType(file: string): string {
     WebUI.init();
-    return new CString(_lib.symbols.webui_get_mime_type(toCString(file)));
+    return ptrToString(_lib.symbols.webui_get_mime_type(toCString(file)));
   }
 
   /**
@@ -1009,7 +1007,7 @@ export class WebUI {
    */
   static getLastErrorMessage(): string {
     WebUI.init();
-    return new CString(_lib.symbols.webui_get_last_error_message());
+    return ptrToString(_lib.symbols.webui_get_last_error_message());
   }
 
   static get version() {
