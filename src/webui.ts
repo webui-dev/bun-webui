@@ -858,8 +858,15 @@ export class WebUI {
     WebUI.init();
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     while (1) {
-      await sleep(100);
-      if (!_lib.symbols.webui_interface_is_app_running()) {
+      // Sleep for a short time to avoid busy waiting and high CPU usage.
+      await sleep(25);
+      // Call `webui_wait_async()` to allow WebUI to process any pending events
+      // and check if windows are still open. Also, render any WebView graphics.
+      //
+      // Note: It's very important to call `webui_wait_async()` from main thread,
+      // otherwise WebView may not render or respond to events.
+      if (!_lib.symbols.webui_wait_async()) {
+        // No more windows are open, we can exit the loop.
         break;
       }
     }
