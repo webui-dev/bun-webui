@@ -1,5 +1,5 @@
 /*
-  WebUI Bun 2.5.5
+  WebUI Bun 2.5.6
   http://webui.me
   https://github.com/webui-dev/bun-webui
   Copyright (c) 2020-2026 Hassan Draga.
@@ -1018,7 +1018,7 @@ export class WebUI {
   }
 
   static get version() {
-    return "2.5.5";
+    return "2.5.6";
   }
 }
 
