@@ -28,7 +28,11 @@
   "author": "Hassan Draga",
   "license": "MIT",
   "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
     "@types/bun": "latest",
     "typescript": "^5"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16"
   }
 }

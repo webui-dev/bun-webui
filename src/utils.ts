@@ -4,6 +4,7 @@
 import { promises as fs } from "fs";
 import { homedir } from "os";
 import { resolve } from "path";
+import AdmZip from "adm-zip";
 
 // The WebUI core version to download
 // const WebUICoreVersion = "2.5.0-beta.3";
@@ -20,48 +21,10 @@ function joinPath(...segments: string[]): string {
 }
 
 /**
- * Download a file from the Internet and save it to the destination.
- */
-async function downloadFile(url: string, dest: string) {
-  const res = await fetch(url);
-  const fileData = new Uint8Array(await res.arrayBuffer());
-  await fs.writeFile(dest, fileData);
-}
-
-/**
- * Run a system command.
- */
-async function runCommand(cmd: string, args: string[]): Promise<void> {
-  const process = Bun.spawn({
-    cmd: [cmd, ...args],
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const exitCode = await process.exited;
-  if (exitCode !== 0) {
-    throw new Error(`Command "${cmd}" failed with exit code ${exitCode}`);
-  }
-}
-
-/**
  * Create a directory. Uses recursive mkdir.
  */
 async function createDirectory(dirPath: string): Promise<void> {
   await fs.mkdir(dirPath, { recursive: true });
-}
-
-/**
- * Copy a file from srcPath to destPath, overwriting if necessary.
- */
-async function copyFileOverwrite(srcPath: string, destPath: string) {
-  try {
-    await fs.rm(destPath);
-  } catch (error) {
-    if ((error as any).code !== "ENOENT") {
-      throw error;
-    }
-  }
-  await fs.copyFile(srcPath, destPath);
 }
 
 /**
@@ -161,32 +124,23 @@ export async function downloadCoreLibrary() {
   }
 
   // Construct file name and download URL
-  const cacheDir = joinPath(currentModulePath, "cache");
   const fileName = `webui-${os}-${cc}-${arch}`;
   const fileUrl = `${baseUrl}${fileName}.zip`;
   const outputDir = joinPath(currentModulePath, fileName);
-
-  // Create cache directory
-  await createDirectory(cacheDir);
-
-  // Download the archive
-  const zipPath = joinPath(cacheDir, `${fileName}.zip`);
-  await downloadFile(fileUrl, zipPath);
-
-  // Extract the archive
-  if (process.platform === "win32") {
-    await runCommand("tar", ["-xf", zipPath, "-C", cacheDir]);
-  } else {
-    await runCommand("unzip", ["-o", "-q", zipPath, "-d", cacheDir]);
-  }
-
-  // Copy library
   const libFile = process.platform === "win32" ? `webui-2.${ext}` : `libwebui-2.${ext}`;
-  await createDirectory(outputDir);
-  await copyFileOverwrite(joinPath(cacheDir, fileName, libFile), joinPath(outputDir, libFile));
 
-  // Remove cache directory
-  await fs.rm(cacheDir, { recursive: true, force: true });
+  // Download the archive into memory
+  const res = await fetch(fileUrl);
+  const buffer = Buffer.from(await res.arrayBuffer());
+
+  // Extract only the library file directly to outputDir
+  const zip = new AdmZip(buffer);
+  const entry = zip.getEntry(`${fileName}/${libFile}`);
+  if (!entry) {
+    throw new Error(`Library not found in archive: ${fileName}/${libFile}`);
+  }
+  await createDirectory(outputDir);
+  zip.extractEntryTo(entry, outputDir, false, true);
 }
 
 /**
