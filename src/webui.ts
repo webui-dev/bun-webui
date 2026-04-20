@@ -117,7 +117,6 @@ self.onmessage = (event) => {
         threadsafe: true,
       }
     );
-    log("Binding callback for windowId=" + windowId + ", elementId='" + elementId + "'");
     _lib.symbols.webui_interface_bind(windowId, toCString(elementId), callbackResource);
     self.postMessage({ id, result: "bind_success" });
   } else if (action === "setFileHandler") {
