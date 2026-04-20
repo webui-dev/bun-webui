@@ -41,7 +41,7 @@ let _lib: WebUILib;
 //  [UserFunction] --> [Bind] --> [Worker] -> [WebUI]
 //  [WebUI] --> [Worker] --> [ffiWorker.onmessage] --> [UserFunction]
 
-const ffiWorker = new Worker(new URL("./ffi_worker.js", import.meta.url).href, { type: "module" });
+const ffiWorker = new Worker(new URL("./ffi_worker.ts", import.meta.url).href, { type: "module" });
 const pendingResponses = new Map<string, { resolve: (v: any) => void; reject: (e: any) => void }>();
 let callbackRegistry: BindCallback<any>[] = [];
 let callbackFileHandlerRegistry: BindFileHandlerCallback<any>[] = [];
