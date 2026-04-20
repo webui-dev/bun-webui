@@ -1,7 +1,7 @@
 // Bun WebUI
 // Utilities
 
-import { promises as fs } from "fs";
+import { promises as fs, mkdirSync } from "fs";
 import { homedir } from "os";
 import { resolve } from "path";
 import AdmZip from "adm-zip";
@@ -33,33 +33,33 @@ async function createDirectory(dirPath: string): Promise<void> {
 export const currentModulePath = (() => {
   let directory = new URL(import.meta.url).pathname;
   const isWindows = process.platform === "win32";
+  const pathSeparator = isWindows ? "\\" : "/";
+
   if (isWindows) {
-    if (directory.startsWith("/B:/%7EBUN/") && directory.endsWith(".exe")) {
-      directory = Bun.pathToFileURL("./dist.exe").pathname;
-      //Handling special characters
-      directory = decodeURIComponent(directory);
-    }
     if (directory.startsWith("/")) {
-      // Remove first '/'
       directory = directory.slice(1);
     }
-    // Replace all forward slashes with backslashes for Windows paths
     directory = directory.replaceAll("/", "\\");
   }
 
-  // hacky fix for EACCESS when being used in a single-file-executable in Bun
-  if (directory.includes("$bunfs")) {
-    // Redirect to a fallback directory'
-    directory = resolve(homedir(), ".bun-webui");
+  // Bun compiled single-file executables use virtual filesystems:
+  // - Unix/macOS: paths contain "$bunfs"
+  // - Windows (Bun <1.2): paths contain "%7EBUN" (URL-encoded "~BUN")
+  // - Windows (Bun 1.2+): import.meta.url resolves to "//" or similar, producing "\" after normalization
+  // In all these cases redirect to ~/.bun-webui so the DLL has a real writable location.
+  const isBunVirtualFs = directory.includes("$bunfs")
+    || directory.includes("%7EBUN")
+    || directory === "\\"
+    || directory === "/";
+  if (isBunVirtualFs) {
+    const fallback = resolve(homedir(), ".bun-webui") + pathSeparator;
     try {
-      createDirectory(directory)
-    } catch {/* it probably already exists. */ }
+      mkdirSync(fallback, { recursive: true });
+    } catch {/* already exists */}
+    return fallback;
   }
 
-  const pathSeparator = isWindows ? "\\" : "/";
   const lastIndex = directory.lastIndexOf(pathSeparator);
-
-  // Remove any trailing part after the last path separator
   directory = directory.substring(0, lastIndex + 1);
 
   if (directory === "") {
