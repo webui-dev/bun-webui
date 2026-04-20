@@ -4,6 +4,8 @@
 import { dlopen } from "bun:ffi";
 import { libName } from "../deps.js";
 
+export { libName };
+
 export function loadLib() {
   return dlopen(
     libName,

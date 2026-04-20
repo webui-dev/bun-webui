@@ -9,7 +9,7 @@
 */
 
 import { CString, type Pointer } from "bun:ffi";
-import { loadLib } from "./lib.js";
+import { loadLib, libName } from "./lib.js";
 import {
   BindCallback,
   BindFileHandlerCallback,
@@ -41,7 +41,178 @@ let _lib: WebUILib;
 //  [UserFunction] --> [Bind] --> [Worker] -> [WebUI]
 //  [WebUI] --> [Worker] --> [ffiWorker.onmessage] --> [UserFunction]
 
-const ffiWorker = new Worker(new URL("./ffi_worker.ts", import.meta.url).href, { type: "module" });
+const workerBlob = new Blob([`import { JSCallback, dlopen } from "bun:ffi";
+import { log } from "console";
+
+let _lib = null;
+
+const toCString = (value) => new TextEncoder().encode(value + "\\0");
+
+const loadLib = (libPath) => {
+  _lib = dlopen(libPath, {
+    webui_interface_bind: {
+      args: ["usize", "buffer", "function"],
+      returns: "usize",
+    },
+    webui_set_file_handler: {
+      args: ["usize", "function"],
+      returns: "void",
+    },
+    webui_set_file_handler_window: {
+      args: ["usize", "function"],
+      returns: "void",
+    },
+    webui_set_close_handler_wv: {
+      args: ["usize", "function"],
+      returns: "void",
+    },
+    webui_set_logger: {
+      args: ["function", "pointer"],
+      returns: "void",
+    },
+  });
+};
+
+self.onmessage = (event) => {
+  const { id, action, data } = event.data;
+
+  if (action === "init") {
+    loadLib(data.libPath);
+    self.postMessage({ id, result: "init_success" });
+    return;
+  }
+
+  if (!_lib) {
+    self.postMessage({ id, error: "Worker not initialized" });
+    return;
+  }
+
+  if (action === "bind") {
+    const windowId = BigInt(data.windowId);
+    const elementId = data.elementId;
+    const callbackIndex = data.callbackIndex;
+    const callbackResource = new JSCallback(
+      (
+        _param_window,
+        _param_event_type,
+        _param_element,
+        _param_event_number,
+        _param_bind_id
+      ) => {
+        self.postMessage({
+          action: "invokeCallback",
+          data: {
+            callbackIndex,
+            param_window: _param_window,
+            param_event_type: _param_event_type,
+            param_element: _param_element,
+            param_event_number: _param_event_number,
+            param_bind_id: _param_bind_id,
+          },
+        });
+      },
+      {
+        returns: "void",
+        args: ["usize", "usize", "pointer", "usize", "usize"],
+        threadsafe: true,
+      }
+    );
+    log("Binding callback for windowId=" + windowId + ", elementId='" + elementId + "'");
+    _lib.symbols.webui_interface_bind(windowId, toCString(elementId), callbackResource);
+    self.postMessage({ id, result: "bind_success" });
+  } else if (action === "setFileHandler") {
+    const windowId = BigInt(data.windowId);
+    const callbackIndex = data.callbackIndex;
+    const callbackResource = new JSCallback(
+      (_param_url, _param_length) => {
+        self.postMessage({
+          action: "invokeFileHandler",
+          data: {
+            callbackIndex,
+            windowId,
+            param_url: _param_url,
+            param_length: _param_length,
+          },
+        });
+      },
+      {
+        returns: "pointer",
+        args: ["pointer", "pointer"],
+        threadsafe: true,
+      }
+    );
+    _lib.symbols.webui_set_file_handler(windowId, callbackResource);
+    self.postMessage({ id, result: "setFileHandler_success" });
+  } else if (action === "setFileHandlerWindow") {
+    const windowId = BigInt(data.windowId);
+    const callbackIndex = data.callbackIndex;
+    const callbackResource = new JSCallback(
+      (_param_window, _param_url, _param_length) => {
+        self.postMessage({
+          action: "invokeFileHandlerWindow",
+          data: {
+            callbackIndex,
+            windowId: _param_window,
+            param_url: _param_url,
+            param_length: _param_length,
+          },
+        });
+      },
+      {
+        returns: "pointer",
+        args: ["usize", "pointer", "pointer"],
+        threadsafe: true,
+      }
+    );
+    _lib.symbols.webui_set_file_handler_window(windowId, callbackResource);
+    self.postMessage({ id, result: "setFileHandlerWindow_success" });
+  } else if (action === "setCloseHandlerWV") {
+    const windowId = BigInt(data.windowId);
+    const sharedBuffer = data.sharedBuffer;
+    const view = new Int32Array(sharedBuffer);
+    const callbackResource = new JSCallback(
+      (_param_window) => {
+        return Atomics.load(view, 0) !== 0;
+      },
+      {
+        returns: "bool",
+        args: ["usize"],
+        threadsafe: true,
+      }
+    );
+    _lib.symbols.webui_set_close_handler_wv(windowId, callbackResource);
+    self.postMessage({ id, result: "setCloseHandlerWV_success" });
+  } else if (action === "setLogger") {
+    const callbackIndex = data.callbackIndex;
+    const callbackResource = new JSCallback(
+      (_param_level, _param_log, _param_user_data) => {
+        self.postMessage({
+          action: "invokeLogger",
+          data: {
+            callbackIndex,
+            param_level: _param_level,
+            param_log: _param_log,
+          },
+        });
+      },
+      {
+        returns: "void",
+        args: ["usize", "pointer", "pointer"],
+        threadsafe: true,
+      }
+    );
+    _lib.symbols.webui_set_logger(callbackResource, null);
+    self.postMessage({ id, result: "setLogger_success" });
+  }
+};`], { type: "application/javascript" });
+const workerUrl = URL.createObjectURL(workerBlob);
+const ffiWorker = new Worker(workerUrl, { type: "module" });
+ffiWorker.onerror = (event: ErrorEvent) => {
+  console.error("ffiWorker error:", event.message, event.filename, event.lineno, event.colno);
+};
+ffiWorker.onmessageerror = (event: MessageEvent) => {
+  console.error("ffiWorker message error:", event);
+};
 const pendingResponses = new Map<string, { resolve: (v: any) => void; reject: (e: any) => void }>();
 let callbackRegistry: BindCallback<any>[] = [];
 let callbackFileHandlerRegistry: BindFileHandlerCallback<any>[] = [];
@@ -826,6 +997,14 @@ export class WebUI {
       _lib = loadLib();
       // Enable asynchronous responses for callbacks.
       _lib.symbols.webui_set_config(BigInt(5), true);
+      postToWorker({
+        action: "init",
+        data: {
+          libPath: libName,
+        },
+      }).catch((error) => {
+        throw new WebUIError("Failed to initialize worker: " + error);
+      });
     }
   }
 

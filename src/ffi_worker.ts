@@ -11,6 +11,7 @@
 import { JSCallback, type Pointer } from "bun:ffi";
 import { loadLib } from "./lib.js";
 import { toCString } from "./utils.js";
+import { log } from "console";
 
 // Load the WebUI library inside the worker
 const _lib = loadLib();
@@ -49,6 +50,7 @@ self.onmessage = (event: MessageEvent) => {
         threadsafe: true,
       }
     ) as any as Pointer;
+    log(`Binding callback for windowId=${windowId}, elementId='${elementId}'`);
     _lib.symbols.webui_interface_bind(windowId, toCString(elementId), callbackResource);
     self.postMessage({ id, result: "bind_success" });
   } else if (action === "setFileHandler") {
