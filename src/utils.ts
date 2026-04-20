@@ -2,7 +2,6 @@
 // Utilities
 
 import { promises as fs, mkdirSync } from "fs";
-import { homedir } from "os";
 import { resolve } from "path";
 import AdmZip from "adm-zip";
 
@@ -46,17 +45,18 @@ export const currentModulePath = (() => {
   // - Unix/macOS: paths contain "$bunfs"
   // - Windows (Bun <1.2): paths contain "%7EBUN" (URL-encoded "~BUN")
   // - Windows (Bun 1.2+): import.meta.url resolves to "//" or similar, producing "\" after normalization
-  // In all these cases redirect to ~/.bun-webui so the DLL has a real writable location.
+  // Cache next to the compiled exe so behavior matches `bun run` (which caches next to the script).
   const isBunVirtualFs = directory.includes("$bunfs")
     || directory.includes("%7EBUN")
     || directory === "\\"
     || directory === "/";
   if (isBunVirtualFs) {
-    const fallback = resolve(homedir(), ".bun-webui") + pathSeparator;
+    // process.argv[0] is the compiled exe path; use its directory as the cache root.
+    const exeDir = resolve(process.argv[0] ?? ".", "..") + pathSeparator;
     try {
-      mkdirSync(fallback, { recursive: true });
+      mkdirSync(exeDir, { recursive: true });
     } catch {/* already exists */}
-    return fallback;
+    return exeDir;
   }
 
   const lastIndex = directory.lastIndexOf(pathSeparator);
